@@ -24,7 +24,7 @@ void handleCtrlC(int sig)
 
 int main(int argc, char **argv)
 {
-	int retval, curr_arg, sig, socket_id, conn_id, client_sockaddr_len;
+	int retval, curr_arg, sig, socket_id, conn_id, client_sockaddr_len, is_connected;
 	struct sockaddr_in bbg_server;
 	char out_file_name[MAX_FILELEN];
 	char change_file_name[MAX_FILELEN];
@@ -138,11 +138,44 @@ int main(int argc, char **argv)
 
 	/* For each accepted connection, listen for messages on conn_id*/
 	client_sockaddr_len = sizeof(struct sockaddr_in);
-	if( connect(socket_id, (struct sockaddr *)&bbg_server, client_sockaddr_len ) < 0)
+
+	/* Set send and recv timeouts*/
+	struct timeval timeout;
+	timeout.tv_sec  = 5;
+	timeout.tv_usec = 0;
+
+	if (setsockopt(socket_id, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout))< 0)
 	{
-		printf("[bbg_server] Failed to connect!");
-		logFromMain(logger_queue, LOG_CRITICAL, "Failed to connect to server!\n");
-		main_state = STATE_SHUTDOWN;
+		printf("[bbg_server] Failed to set receive timeout\n");
+	}
+	if (setsockopt(socket_id, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout))< 0)
+	{
+		printf("[bbg_server] Failed to set receive timeout\n");
+	}
+
+	/* spin until SIGINT, SIGTERM, or connection*/
+	is_connected = 0;
+	while ((is_connected == 0) && (main_state > STATE_SHUTDOWN))
+	{
+		if( connect(socket_id, (struct sockaddr *)&bbg_server, client_sockaddr_len ) < 0)
+		{
+			if ((errno == EINPROGRESS) || (errno == EALREADY) ){ 
+				printf("[bbg_server] Waiting to connect to remote node\n");
+			}
+			else if (errno == ECONNREFUSED){
+				printf("[bbg_server] Waiting to connect to remote node\n");
+				sleep(5);
+			}
+			else{
+				printf("\n[bbg_server] Failed to connect with errno %d!\n", errno);
+				logFromMain(logger_queue, LOG_CRITICAL, "Failed to connect to server!\n");
+				main_state = STATE_SHUTDOWN;
+			}
+		}
+		else
+		{
+			is_connected = 1;
+		}
 	}
 	printf("[bbg_server] Connected!\n");
 

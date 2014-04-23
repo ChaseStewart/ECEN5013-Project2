@@ -9,6 +9,7 @@ void * mainSocket(void *arg)
 	mqd_t socket_queue, main_queue, logger_queue;
 	message_t *in_message;
 	char in_buffer[MAX_MSGLEN];
+	char print_string[MAX_MSGLEN];
 	char the_rest[MAX_MSGLEN];
 	int *type_enum;
 	int *temp_data;
@@ -55,50 +56,51 @@ void * mainSocket(void *arg)
 		retval = recv(sock_handle, &in_buffer, MAX_MSGLEN, 0);
 		if (retval > 0)
 		{
-			sscanf(in_buffer, "%d:%s", &type_enum, &the_rest);
+			sscanf(in_buffer, "%d:%[^\t\n]", &type_enum, &the_rest);
 			choice = (int)type_enum;
 			switch (choice)
 			{
 				case DATA_PKT:
 					sscanf(the_rest, "%d:%d:%d", &temp_data, &light_data, &humid_data);
-					sprintf(in_buffer, "Got data: temp=%d, light=%d, humid=%d\n", temp_data, light_data, humid_data);
-					logFromSocket(logger_queue, LOG_INFO, in_buffer);
+					sprintf(print_string, "Got data: temp=%d, light=%d, humid=%d\n", temp_data, light_data, humid_data);
+					logFromSocket(logger_queue, LOG_INFO, print_string);
 					break;
 	
 				case NO_DATA_PKT:
-					logFromSocket(logger_queue, LOG_INFO, "No data from TIVA\n");
+					logFromSocket(logger_queue, LOG_ERROR, "No data from TIVA\n");
 					break;
 
 				case ALRT_PKT:
-					//TODO FIXME
-					sprintf(in_buffer,"Received alert: %s", the_rest);
-					logFromSocket(logger_queue, LOG_INFO, "No data from TIVA\n");
+					sprintf(print_string,"Received alert: %s\n", the_rest);
+					logFromSocket(logger_queue, LOG_ERROR, print_string);
 					break;
 
 				case ERR_PKT:
 					printf("[socket] received ERR from TIVA\n");
-					logFromSocket(logger_queue, LOG_ERROR, the_rest);
+					sprintf(print_string,"%s\n", the_rest);
+					logFromSocket(logger_queue, LOG_ERROR, print_string);
 					main_state = STATE_ERROR;
 					raise(SIGTERM);
 					break;
 
 				case LOG_PKT:
-					logFromSocket(logger_queue, LOG_INFO, the_rest);
+					sprintf(print_string,"%s\n", the_rest);
+					logFromSocket(logger_queue, LOG_INFO, print_string);
 					break;
 				default:
 					logFromSocket(logger_queue, LOG_ERROR, "Received invalid TYPE command!\n");
 					main_state = STATE_ERROR;
 					raise(SIGTERM);
 					break;
-					
 			}
 		
 		}
 		else if ((retval == 0))
 		{
-			pthread_exit(NULL);
+			logFromSocket(logger_queue, LOG_CRITICAL, "Server forced disconnect!\n");
+			socket_state = STATE_SHUTDOWN;
 		}
-		else if ((retval < 0) && (errno != EINTR)) 
+		else if ((retval < 0) && ((errno != EINTR) || (errno != EAGAIN))) 
 		{
 			printf("[socket_thread] Failed to receive with retval %d and errno %d\n", retval, errno);
 			socket_state = STATE_SHUTDOWN;
@@ -132,6 +134,8 @@ void * mainSocket(void *arg)
 	logFromSocket(logger_queue, LOG_INFO, "Destroyed Socket\n");
 	pthread_exit(NULL);
 }
+
+
 
 int8_t initSocketQueues(mqd_t *main_queue, mqd_t *logger_queue, mqd_t *socket_queue)
 {
@@ -188,6 +192,8 @@ int8_t logFromSocket(mqd_t queue, int prio, char *message)
 int8_t sendMessage(message_t *in_message)
 {
 	printf("[socket_thread] TODO write this\n");
+	if (in_message->id != SOCKET);
+
 	return 1;
 
 }
