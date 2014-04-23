@@ -11,10 +11,21 @@ void * mainSocket(void *arg)
 	char in_buffer[MAX_MSGLEN];
 	char print_string[MAX_MSGLEN];
 	char the_rest[MAX_MSGLEN];
+	char mysql_string[MAX_MSGLEN];
 	int *type_enum;
 	int *temp_data;
 	int *light_data;
 	int *humid_data;
+	
+	MYSQL *conn;
+	MYSQL_RES *res;
+	MYSQL_ROW row;
+	
+	char server[]   = "localhost";
+	char user[]     = "bbb_user";
+	char password[] = "bbb_password";
+	char database[] = "plantprotector";
+	
 
 	/* initialize the queue. */
 	retval = initSocketQueues(&main_queue, &logger_queue, &socket_queue);
@@ -48,6 +59,16 @@ void * mainSocket(void *arg)
 		logFromSocket(logger_queue, LOG_CRITICAL, "Failed to init socket\n");
 	}
 
+
+	conn = mysql_init(NULL);
+	if (!mysql_real_connect(conn, server, user, password, database, 0,NULL,0))
+	{
+		logFromSocket(logger_queue, LOG_ERROR, "Failed to connect to MySQL!\n");
+		main_state = STATE_ERROR;
+		socket_state = STATE_ERROR;
+	}
+	logFromSocket(logger_queue, LOG_INFO, "Connected to MySQL database!\n");
+
 	sigemptyset(&set);
 	sigaddset(&set, SOCKET_SIGNO);
 	/* this is the main loop for the program */
@@ -60,10 +81,20 @@ void * mainSocket(void *arg)
 			choice = (int)type_enum;
 			switch (choice)
 			{
+				case UNUSED:
+					break;
 				case DATA_PKT:
 					sscanf(the_rest, "%d:%d:%d", &temp_data, &light_data, &humid_data);
 					sprintf(print_string, "Got data: temp=%d, light=%d, humid=%d\n", temp_data, light_data, humid_data);
 					logFromSocket(logger_queue, LOG_INFO, print_string);
+
+					sprintf(mysql_string, "INSERT INTO plant_data(temperature, humidity, light) values (%d, %d, %d);", temp_data, light_data, humid_data);
+					if(mysql_query(conn, mysql_string))
+					{
+						printf("[socket_thread] MYSQL_ERROR: %s\n", mysql_error(conn));
+						main_state = STATE_SHUTDOWN;
+						socket_state = STATE_SHUTDOWN;
+					}
 					break;
 	
 				case NO_DATA_PKT:
@@ -99,11 +130,16 @@ void * mainSocket(void *arg)
 		{
 			logFromSocket(logger_queue, LOG_CRITICAL, "Server forced disconnect!\n");
 			socket_state = STATE_SHUTDOWN;
+			main_state = STATE_SHUTDOWN;
 		}
-		else if ((retval < 0) && ((errno != EINTR) || (errno != EAGAIN))) 
+		else if (retval < 0) 
 		{
-			printf("[socket_thread] Failed to receive with retval %d and errno %d\n", retval, errno);
-			socket_state = STATE_SHUTDOWN;
+			if (errno != 11)
+			{
+				printf("[socket_thread] Failed to receive with retval %d and errno %d\n", retval, errno);
+				socket_state = STATE_SHUTDOWN;
+				main_state = STATE_SHUTDOWN;
+			}
 		}
 
 		/* NOTE: this call is allowed to fail */
@@ -130,6 +166,7 @@ void * mainSocket(void *arg)
 			}
 		}
 	}
+	mysql_close(conn);
 	printf("[socket_thread] Destroyed Socket\n");
 	logFromSocket(logger_queue, LOG_INFO, "Destroyed Socket\n");
 	pthread_exit(NULL);
