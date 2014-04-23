@@ -86,8 +86,8 @@ int main(int argc, char **argv)
 	retval = initMainQueues(&main_queue, &logger_queue, &socket_queue);
 	if (retval != 0)
 	{
-		logFromMain(logger_queue, LOG_CRITICAL, "Failed to initialize Main queues!\n");
-		printf("INIT MAIN QUEUES FAILED!\n");
+		printf("Failed to init main queues!\n");
+		return 1;
 	}
 
 	/* create the logger thread */
@@ -96,7 +96,7 @@ int main(int argc, char **argv)
 	my_log_args->length = strlen(out_file_name);
 	if(pthread_create(&logger_thread, NULL, mainLogger, my_log_args) != 0)
 	{
-		logFromMain(logger_queue, LOG_CRITICAL, "Failed to create logger thread!\n");
+		printf( "Failed to create logger thread!\n");
 		return 1;
 	}
 	
@@ -114,7 +114,6 @@ int main(int argc, char **argv)
 		return -1;
 	}
 	
-	char strPrint[100];
 	/* begin recurring heartbeat timer */		
 
 	sigemptyset(&set);
@@ -142,6 +141,8 @@ int main(int argc, char **argv)
 	if( connect(socket_id, (struct sockaddr *)&bbg_server, client_sockaddr_len ) < 0)
 	{
 		printf("[bbg_server] Failed to connect!");
+		logFromMain(logger_queue, LOG_CRITICAL, "Failed to connect to server!\n");
+		main_state = STATE_SHUTDOWN;
 	}
 	printf("[bbg_server] Connected!\n");
 
@@ -193,7 +194,6 @@ int main(int argc, char **argv)
 			/* for the first time, only request a heartbeat*/
 			if (main_state == STATE_STARTUP)
 			{
-				char a = 0;
 				main_state = STATE_REQ_RSP;
 				reqHeartbeats(logger_queue, socket_queue);
 				pthread_kill(logger_thread, LOGGER_SIGNO);
@@ -250,26 +250,6 @@ int main(int argc, char **argv)
 
 	printf("All main queues closed!\n");
 
-	/* now unlink the queue for all */
-	retval = mq_unlink(MAIN_QUEUE_NAME);
-	if (retval == -1)
-	{
-		printf("Failed to unlink queue\n");
-		return 1;
-	}
-	retval = mq_unlink(LOGGER_QUEUE_NAME);
-	if (retval == -1)
-	{
-		printf("Failed to unlink queue\n");
-		return 1;
-	}
-	retval = mq_unlink(SOCKET_QUEUE_NAME);
-	if (retval == -1)
-	{
-		printf("Failed to unlink queue\n");
-		return 1;
-	}
-
 	/* on close, reap socket_thread */
 	if (pthread_join(socket_thread, NULL) != 0)
 	{
@@ -283,6 +263,26 @@ int main(int argc, char **argv)
 		printf("failed to reap logger_thread\n");
 		return 1;
 	}
+	/* now unlink the queue for all */
+	retval = mq_unlink(MAIN_QUEUE_NAME);
+	if (retval == -1)
+	{
+		printf("Failed to unlink queue\n");
+		return 1;
+	}
+	retval = mq_unlink(SOCKET_QUEUE_NAME);
+	if (retval == -1)
+	{
+		printf("Failed to unlink queue\n");
+		return 1;
+	}
+	retval = mq_unlink(LOGGER_QUEUE_NAME);
+	if (retval == -1)
+	{
+		printf("Failed to unlink queue\n");
+		return 1;
+	}
+
 
 	if(main_state == STATE_ERROR)
 	{
@@ -302,7 +302,6 @@ int8_t processHeartbeats(mqd_t main_queue, mqd_t logger_queue)
 	char in_buffer[4096];
 	char heartbeat_msg[1024];
 	message_t *in_message;
-	char strPrint[100];
 	in_message = (message_t *) malloc(sizeof(message_t));
 
 	/* process all messages and set corresponding hbt_rsp entry */

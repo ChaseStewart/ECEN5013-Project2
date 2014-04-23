@@ -4,11 +4,12 @@
 void * mainSocket(void *arg)
 {
 	sigset_t set;
-	int retval, sig, sock_handle;
+	int retval, sig, sock_handle, choice;
 	struct sigevent my_sigevent;
 	mqd_t socket_queue, main_queue, logger_queue;
 	message_t *in_message;
 	char in_buffer[MAX_MSGLEN];
+	char the_rest[MAX_MSGLEN];
 	int *type_enum;
 	int *temp_data;
 	int *light_data;
@@ -54,8 +55,43 @@ void * mainSocket(void *arg)
 		retval = recv(sock_handle, &in_buffer, MAX_MSGLEN, 0);
 		if (retval > 0)
 		{
-			sscanf(in_buffer, "%d:%d:%d:%d", &type_enum, &temp_data, &light_data, &humid_data);
-			printf("[socket_thread] type is %d, temp is %d, light is %d, humidity is %d\n", type_enum, temp_data, light_data, humid_data);
+			sscanf(in_buffer, "%d:%s", &type_enum, &the_rest);
+			choice = (int)type_enum;
+			switch (choice)
+			{
+				case DATA_PKT:
+					sscanf(the_rest, "%d:%d:%d", &temp_data, &light_data, &humid_data);
+					sprintf(in_buffer, "Got data: temp=%d, light=%d, humid=%d\n", temp_data, light_data, humid_data);
+					logFromSocket(logger_queue, LOG_INFO, in_buffer);
+					break;
+	
+				case NO_DATA_PKT:
+					logFromSocket(logger_queue, LOG_INFO, "No data from TIVA\n");
+					break;
+
+				case ALRT_PKT:
+					//TODO FIXME
+					sprintf(in_buffer,"Received alert: %s", the_rest);
+					logFromSocket(logger_queue, LOG_INFO, "No data from TIVA\n");
+					break;
+
+				case ERR_PKT:
+					printf("[socket] received ERR from TIVA\n");
+					logFromSocket(logger_queue, LOG_ERROR, the_rest);
+					main_state = STATE_ERROR;
+					raise(SIGTERM);
+					break;
+
+				case LOG_PKT:
+					logFromSocket(logger_queue, LOG_INFO, the_rest);
+					break;
+				default:
+					logFromSocket(logger_queue, LOG_ERROR, "Received invalid TYPE command!\n");
+					main_state = STATE_ERROR;
+					raise(SIGTERM);
+					break;
+					
+			}
 		
 		}
 		else if ((retval == 0))
