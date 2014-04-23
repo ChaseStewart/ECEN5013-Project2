@@ -5,7 +5,7 @@ if (!$con) {
 	die('Could not connect: ' . mysql_error());
 }
 
-$sth = "SELECT temperature FROM plant_data limit 50";
+$sth = "SELECT temperature, unixtime FROM plant_data ORDER BY unixtime DESC limit 50";
 
 $rows0 = array();
 $rows0['name'] = 'Temperature';
@@ -14,7 +14,7 @@ while($tdata = $result->fetch_assoc()) {
 	$rows0['data'][] = $tdata['temperature'];
 }
 
-$sth = "SELECT humidity FROM plant_data limit 50";
+$sth = "SELECT humidity, unixtime FROM plant_data ORDER BY unixtime DESC limit 50";
 $rows1 = array();
 $rows1['name'] = 'Humidity';
 $result = $con->query($sth);
@@ -22,7 +22,7 @@ while($hdata = $result->fetch_assoc()) {
 	$rows1['data'][] = $hdata['humidity'];
 }
 
-$sth = "SELECT light FROM plant_data limit 50";
+$sth = "SELECT light, unixtime FROM plant_data ORDER BY unixtime DESC limit 50";
 $rows2 = array();
 $rows2['name'] = 'Light';
 $result = $con->query($sth);
@@ -30,7 +30,7 @@ while($ldata = $result->fetch_assoc()) {
 	$rows2['data'][] = $ldata['light'];
 }
 
-$sth = "SELECT UNIX_TIMESTAMP(unixtime) as utime FROM plant_data limit 50";
+$sth = "SELECT UNIX_TIMESTAMP(unixtime) as utime FROM plant_data ORDER BY utime DESC  limit 50";
 $rows3 = array();
 $rows3['name'] = 'Timestamp';
 $result = $con->query($sth);
