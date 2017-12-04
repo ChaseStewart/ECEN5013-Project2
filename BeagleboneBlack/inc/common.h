@@ -14,7 +14,7 @@
 #ifndef __MY_COMMON_H__
 #define __MY_COMMON_H__
 
-#define NUM_TASKS 2
+#define NUM_TASKS 1
 #define MAX_FILELEN 1024
 #define MAX_MSGLEN  2048
 

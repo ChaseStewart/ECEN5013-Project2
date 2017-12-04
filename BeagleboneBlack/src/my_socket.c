@@ -1,7 +1,6 @@
 #include "common.h"
 #include "my_socket.h"
 
-
 void * mainSocket(void *arg)
 {
 	sigset_t set;
@@ -54,6 +53,10 @@ void * mainSocket(void *arg)
 		if (retval > 0)
 		{
 			printf("[socket_thread] Received %s\n", in_buffer);
+		}
+		else if ((retval == 0))
+		{
+			pthread_exit(NULL);
 		}
 		else if ((retval < 0) && (errno != EINTR)) 
 		{
