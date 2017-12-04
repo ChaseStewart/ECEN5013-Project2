@@ -13,12 +13,19 @@
 #include "soilTIVA.h"
 
 /*Global Variables*/
+/*Queue Handles*/
 QueueHandle_t mainQueue;
 QueueHandle_t tempQueue;
 QueueHandle_t lightQueue;
 QueueHandle_t socketQueue;
 QueueHandle_t soilQueue;
 QueueHandle_t chargeQueue;
+
+/*Task Handles*/
+TaskHandle_t lightTaskHandle;
+TaskHandle_t tempTaskHandle;
+
+uint32_t sysClockSet = 0;
 
 /*Main Function*/
 int main(void)
@@ -30,6 +37,8 @@ int main(void)
                                 SYSCTL_USE_PLL | SYSCTL_CFG_VCO_480),
                                SYSTEM_CLOCK);
     ASSERT(output_clock_rate_hz == SYSTEM_CLOCK);
+
+    sysClockSet = output_clock_rate_hz;
 
     /*Initialize the GPIO Pins of TIVA*/
     PinoutSet(false, false);
@@ -63,18 +72,39 @@ int main(void)
     }
 
     /*Create different Tasks*/
-    xTaskCreate(tempTask, (const portCHAR *)"TemperatureTask", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
-    xTaskCreate(lightTask, (const portCHAR *)"LightTask", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+    //BaseType_t xTaskCreate( TaskFunction_t pvTaskCode,const char * const pcName,unsigned short usStackDepth,void *pvParameters
+    //,UBaseType_t uxPriority,TaskHandle_t *pxCreatedTask );
+#if 0
+    if(xTaskCreate(tempTask, (const portCHAR *)"TemperatureTask", configMINIMAL_STACK_SIZE, NULL, 1, &tempTaskHandle) != pdPASS)
+    {
+        UARTprintf("\r\nTemperature Task creation failed");
+    }
+#endif
+    if(xTaskCreate(lightTask, (const portCHAR *)"LightTask", configMINIMAL_STACK_SIZE, NULL, 1, &lightTaskHandle) != pdPASS)
+    {
+        UARTprintf("\r\nLight Task creation failed");
+    }
+
+    /*Random delay given to the main to get synchronize with the new tasks*/
+  //  vTaskDelay(pdMS_TO_TICKS(500));
 
     /*Start the scheduler*/
     vTaskStartScheduler();
+   // while(1);
+
+    /*Delete all the queues that were created*/
+    vQueueDelete(mainQueue);
+    vQueueDelete(tempQueue);
+    vQueueDelete(lightQueue);
+    vQueueDelete(socketQueue);
+
     return 0;
 }
 
-int8_t sendDataFromMain(QueueHandle_t queue, int32_t data)
+int8_t sendDataFromMain(QueueHandle_t queue, Message_Type msgID, int32_t data)
 {
     message_t logMessage;
-    logMessage.id = LOGGER;
+    logMessage.id = msgID;
     logMessage.source = MAIN_TASK_ID;
     logMessage.timestamp = 0;
     logMessage.data.intData = data;     /*Sending integer data will make use of the union variable*/

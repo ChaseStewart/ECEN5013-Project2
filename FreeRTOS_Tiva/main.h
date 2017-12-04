@@ -22,7 +22,7 @@
 * param : QueueHandle_t - Queue Handle, int32_t - Integer data to be sent
 * return: 0 on SUCCESS, -1 on Failure
 *****************************************************************/
-int8_t sendDataFromMain(QueueHandle_t queue, int32_t data);
+int8_t sendDataFromMain(QueueHandle_t queue, Message_Type msgID, int32_t data);
 
 /*****************************************************************
 * name  : logFromMain

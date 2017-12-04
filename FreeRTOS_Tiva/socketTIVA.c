@@ -19,5 +19,11 @@ extern QueueHandle_t chargeQueue;
 void socketTask(void *pvParameters)
 {
 
+    while(1)
+    {
+
+    }
+
+    vTaskDelete(NULL);  /*Deletes Current task and frees up memory*/
 }
 

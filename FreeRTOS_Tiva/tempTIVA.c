@@ -20,7 +20,7 @@ extern QueueHandle_t chargeQueue;
 void tempTask(void *pvParameters)
 {
     uint32_t queueData = 0;
-    for (;;)
+    while(1)
     {
 
         GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 1);
@@ -32,4 +32,5 @@ void tempTask(void *pvParameters)
         xQueueSend( lightQueue,&queueData,portMAX_DELAY);  /*This is a test - Fix me*/
         queueData++;
     }
+    vTaskDelete(NULL);  /*Deletes Current task and frees up memory*/
 }
