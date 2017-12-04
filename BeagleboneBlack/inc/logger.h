@@ -30,7 +30,4 @@ int8_t logMessage(message_t *in_message);
  */
 int8_t logFromLogger(mqd_t queue, int prio, char *message);
 
-/* change the logfile */
-FILE *logFileChange(message_t *newName);
-
 #endif

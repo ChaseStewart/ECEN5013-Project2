@@ -26,6 +26,11 @@
 #define NAK_MSG "NAK"
 #define DELIM_STR ":\t\n"
 
+#define LED_ON "ON"
+#define LED_OFF "OFF"
+
+/* period in secs for heartbeat*/
+extern volatile int heartbeat_period;
 
 
 /* command-line options */
@@ -45,14 +50,17 @@ void my_print_help(void);
 
 int initThreads(pthread_t *logger_thread, pthread_t *socket_thread);
 
-int8_t initMainQueues(mqd_t *main_queue, mqd_t *logger_queue, mqd_t *socket_queue);
-
-
 void handleCtrlC(int sig);
 
 int update_data(int msg_type, int value);
 
 int8_t logFromMain(mqd_t queue, int prio, char *message);
+
+int8_t initMainQueues(mqd_t *main_queue, mqd_t *logger_queue, mqd_t *socket_queue);
+
+int8_t reqHeartbeats(mqd_t logger_queue, mqd_t socket_queue);
+
+int8_t processHeartbeats(mqd_t main_queue, mqd_t logger_queue);
 
 int8_t initMainQueues(mqd_t *main_queue, mqd_t *logger_queue, mqd_t *socket_queue);
 

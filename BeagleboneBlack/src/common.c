@@ -19,12 +19,11 @@ int8_t sendHeartbeat(mqd_t queue, Task_Id my_id)
 	retval = mq_send(queue, (const char *) msg, sizeof(message_t), 0);
 	if (retval == -1)
 	{
-		printf("Failed to send from %d  with retval %d\n", my_id, retval);
+		printf("[common] Failed to send from %d\n", my_id);
 		return 1;
 	}
 	return 0;
 }
-
 
 int8_t blockAllSigs(void)
 {

@@ -16,7 +16,7 @@ void * mainSocket(void *arg)
 	retval = initSocketQueues(&main_queue, &logger_queue, &socket_queue);
 	if (retval != 0)
 	{
-		printf("Failed to init socket queues\n");
+		printf("[socket_thread] Failed to init socket queues\n");
 	}
 	
 	/* register to receive socket signals */
@@ -24,18 +24,20 @@ void * mainSocket(void *arg)
 	my_sigevent.sigev_signo  = SOCKET_SIGNO;
 	if (mq_notify(socket_queue, &my_sigevent) == -1 )
 	{
-		printf("Failed to notify!\n");
+		printf("[socket_thread] Failed to notify!\n");
 		return NULL;
 	}
 	
 	retval = blockAllSigs();
 	if (retval != 0)
 	{
-		printf("Failed to set sigmask.\n");
+		printf("[socket_thread] failed to set sigmask.\n");
 		return (void *) 1;
 	}
 
 	sock_handle = *(int *) arg;
+	printf("[socket_thread] created socket\n");
+	printf("[socket_thread] socket ID is %d\n", sock_handle);
 	
 	if(retval < 0)
 	{
@@ -48,6 +50,16 @@ void * mainSocket(void *arg)
 	while(socket_state > STATE_SHUTDOWN)
 	{
 		sigwait(&set, &sig);
+		retval = recv(sock_handle, &in_buffer, MAX_MSGLEN, 0);
+		if (retval > 0)
+		{
+			printf("[socket_thread] Received %s\n", in_buffer);
+		}
+		else if ((retval < 0) && (errno != EINTR)) 
+		{
+			printf("[socket_thread] Failed to receive with retval %d and errno %d\n", retval, errno);
+			socket_state = STATE_SHUTDOWN;
+		}
 
 		/* NOTE: this call is allowed to fail */
 		mq_notify(socket_queue, &my_sigevent);
@@ -65,8 +77,7 @@ void * mainSocket(void *arg)
 			/* process Log*/
 			if (in_message->id == SOCKET)
 			{
-		
-
+				retval = sendMessage(in_message);
 			} 
 			else if (in_message->id == HEARTBEAT_REQ) 
 			{
@@ -74,6 +85,7 @@ void * mainSocket(void *arg)
 			}
 		}
 	}
+	printf("[socket_thread] Destroyed Socket\n");
 	logFromSocket(logger_queue, LOG_INFO, "Destroyed Socket\n");
 	pthread_exit(NULL);
 }
@@ -113,7 +125,7 @@ int8_t logFromSocket(mqd_t queue, int prio, char *message)
 	int retval;
 	message_t msg;
 
-	msg.id = SOCKET;
+	msg.id = LOGGER;
 	msg.timestamp = time(NULL);
 	msg.length = strlen(message);
 	msg.priority = prio;
@@ -132,7 +144,7 @@ int8_t logFromSocket(mqd_t queue, int prio, char *message)
 
 int8_t sendMessage(message_t *in_message)
 {
-	printf("TODO FIXME\n");
+	printf("[socket_thread] TODO write this\n");
 	return 1;
 
 }

@@ -14,17 +14,15 @@
 #ifndef __MY_COMMON_H__
 #define __MY_COMMON_H__
 
-#define NUM_TASKS 3
+#define NUM_TASKS 2
 #define MAX_FILELEN 1024
 #define MAX_MSGLEN  2048
 
 /* queue vars */
 #define QUEUE_MSG_SIZE          100 
 #define QUEUE_NUM_MSGS          2048
-#define MAIN_QUEUE_NAME         "/heartbeat1\x00"
+#define MAIN_QUEUE_NAME         "/heartbeat\x00"
 #define LOGGER_QUEUE_NAME       "/logger\x00"
-#define TEMP_DRIVER_QUEUE_NAME  "/tempdriver\x00"
-#define LIGHT_DRIVER_QUEUE_NAME "/lightdriver\x00"
 #define CLIENT_QUEUE_NAME       "/client\x00"
 #define SOCKET_QUEUE_NAME       "/mysocket\x00"
 
@@ -63,6 +61,7 @@ extern volatile int main_state;
 extern volatile int logger_state;
 extern volatile int socket_state;
 
+
 /* define message_type */
 typedef enum message_type {	
 	HEARTBEAT_REQ = 0, 
@@ -86,8 +85,8 @@ typedef enum message_type {
 /* enumerate each task */
 typedef enum task_id 
 {
-	SOCKET_ID = 0, 
-	LOGGER_ID, 
+	LOGGER_ID = 0, 
+	SOCKET_ID, 
 	MAIN_ID, 
 	CLIENT_ID
 }  Task_Id;

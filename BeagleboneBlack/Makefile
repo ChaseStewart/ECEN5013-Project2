@@ -12,11 +12,11 @@ FILES  += src/common.c
 FILES  += src/my_socket.c
 
 all:
-	$(CC) $(CFLAGS) $(IPATH) $(FILES) $(LIBS) -o server
+	$(CC) $(CFLAGS) $(IPATH) $(FILES) $(LIBS) -o plant_server
 	@echo BBB Server Build Complete!
 
 .PHONY: clean
 
 clean:
-	@rm -vf server
+	@rm -vf plant_server
 	@echo Server Executable Removed!

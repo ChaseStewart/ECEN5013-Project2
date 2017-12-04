@@ -8,15 +8,16 @@ void * mainLogger(void *arg)
 	sigset_t set;
 	int retval, sig;
 	struct sigevent my_sigevent;
-	char in_buffer[4096];
+	char in_buffer[MAX_MSGLEN];
 	message_t *in_message;
 	mqd_t main_queue, logger_queue;
+	printf("[logger_thread] Created logger thread\n");
 
 	/* initialize the queue. */
 	retval = initLoggerQueues(&main_queue, &logger_queue);
 	if (retval != 0)
 	{
-		printf("Failed to init logger queues\n");
+		printf("[logger_thread] Failed to init logger queues\n");
 	}
 	
 	/* register to receive logger signals */
@@ -24,14 +25,14 @@ void * mainLogger(void *arg)
 	my_sigevent.sigev_signo  = LOGGER_SIGNO;
 	if (mq_notify(logger_queue, &my_sigevent) == -1 )
 	{
-		printf("Failed to notify!\n");
+		printf("[logger_thread] Failed to notify!\n");
 		return NULL;
 	}
 	
 	retval = blockAllSigs();
 	if (retval != 0)
 	{
-		printf("Failed to set sigmask.\n");
+		printf("[logger_thread] Failed to set sigmask.\n");
 		return (void *) 1;
 	}
 	
@@ -43,6 +44,7 @@ void * mainLogger(void *arg)
 
 	sigemptyset(&set);
 	sigaddset(&set, LOGGER_SIGNO);
+
 	/* this is the main loop for the program */
 	while(logger_state > STATE_SHUTDOWN)
 	{
@@ -50,7 +52,7 @@ void * mainLogger(void *arg)
 
 		/* NOTE: this call is allowed to fail */
 		mq_notify(logger_queue, &my_sigevent);
-		
+
 		in_message = (message_t *) malloc(sizeof(message_t));
 		errno = 0;
 		while(errno != EAGAIN){
@@ -66,9 +68,6 @@ void * mainLogger(void *arg)
 			{
 				logMessage(in_message);
 			} 
-			if (in_message->id == FILE_CHANGE )
-				out_file = logFileChange(in_message);
-
 			else if (in_message->id == HEARTBEAT_REQ) 
 			{
 				sendHeartbeat(main_queue, LOGGER_ID);
@@ -77,6 +76,7 @@ void * mainLogger(void *arg)
 	}
 	logFromLogger(logger_queue, LOG_INFO, "Destroyed Logger\n");
 	fclose(out_file);	
+	printf("[logger_thread] Destroying Logger\n");
 	pthread_exit(NULL);
 }
 
@@ -95,7 +95,7 @@ int8_t initLoggerQueues(mqd_t *main_queue, mqd_t *logger_queue)
 	{
 		return 1;
 	}
-	printf("Created Logger\n");
+	printf("[logger_thread] Created Logger\n");
 	return 0;
 }
 
@@ -142,34 +142,11 @@ int8_t logMessage(message_t *in_message)
 	retval = sprintf( outMessage ,"[%s][%s][%d] %s", dbg_lvl, mySource, in_message->timestamp, in_message->message);
 	if (retval <= 0)
 	{
-		printf("Error logging output!\n");
+		printf("[logger_thread] Error logging output!\n");
 	}
 	fputs(outMessage, out_file);
-
 	return 0;
 }
-
-FILE *logFileChange(message_t *newName)
-{
-	mqd_t unused = 0;
-
-	if (newName->id == FILE_CHANGE)
-	{
-		fclose(out_file);
-		out_file = fopen(newName->message, "a");
-		if (out_file)
-		{
-			logFromLogger(unused, LOG_INFO, "Log file opened\n");
-			return out_file;
-		}
-		else
-		{
-			return NULL;
-		}
-	}	
-	return NULL;
-}
-
 
 FILE *initLogger(mqd_t queue, void *arg)
 {
