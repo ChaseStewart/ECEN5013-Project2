@@ -10,10 +10,15 @@
 
 #include "common.h"
 
-/*System clock rate, 120 MHz*/
-#define SYSTEM_CLOCK    120000000U
-
 /*Function Declarations*/
+
+/*****************************************************************
+* name  : main
+* brief : The top level function for the whole application
+* param : None
+* return: 0 on SUCCESS, -1 on Failure
+*****************************************************************/
+int main(void);
 
 /*****************************************************************
 * name  : sendDataFromMain
@@ -32,6 +37,24 @@ int8_t sendDataFromMain(QueueHandle_t queue, Message_Type msgID, int32_t data);
 * return: 0 on SUCCESS, -1 on Failure
 *****************************************************************/
 int8_t logFromMain(uint8_t* data);
+
+
+/****************************************************************
+* name  : ADCInit
+* brief : Initialize the ADC for the soil sensor
+* param : None
+* return: None
+*****************************************************************/
+void myADCInit(void);
+
+/****************************************************************
+* name  : I2CInit
+* brief : Initialize the I2C bus for fuel gauge, temp sensor, and light sensor
+* param : None
+* return: None
+*****************************************************************/
+void myI2CInit(void);
+
 
 
 #endif /* MAIN_H_ */

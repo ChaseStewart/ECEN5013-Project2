@@ -51,24 +51,6 @@ void lightTask(void *pvParameters)
 
 void lightSensorInit(void)
 {
-    /*Enable I2C0*/
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C0);
-    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_I2C0));
-	
-	/*Enable GPIO*/
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
-	while(!SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOB));
-
-	/*Configure GPIOs for I2C*/
-	GPIOPinConfigure(GPIO_PB3_I2C0SDA);                /*Pin configure must be called for each pin*/
-    GPIOPinConfigure(GPIO_PB2_I2C0SCL);
-	
-    GPIOPinTypeI2C(GPIO_PORTB_BASE, GPIO_PIN_3);       /*I2C0 - SDA pin*/
-    GPIOPinTypeI2CSCL(GPIO_PORTB_BASE, GPIO_PIN_2);    /*I2C0 - SCL pin*/
-   
-    /*Set Clock Speed and enable Master*/
-    I2CMasterInitExpClk(I2C_LIGHT_DEVICE, sysClockSet, false);
-
     writeCtrlReg(BIT_POWER_UP);     /*Power ON the register*/
 }
 

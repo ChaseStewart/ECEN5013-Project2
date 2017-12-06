@@ -11,6 +11,9 @@
 #include "chargeTIVA.h"
 #include "socketTIVA.h"
 #include "soilTIVA.h"
+#include "driverlib/adc.h"
+#include "driverlib/i2c.h"
+#include "driverlib/pin_map.h"
 
 /*Global Variables*/
 /*Queue Handles*/
@@ -24,6 +27,8 @@ QueueHandle_t chargeQueue;
 /*Task Handles*/
 TaskHandle_t lightTaskHandle;
 TaskHandle_t tempTaskHandle;
+TaskHandle_t chargeTaskHandle;
+TaskHandle_t soilTaskHandle;
 
 uint32_t sysClockSet = 0;
 
@@ -53,6 +58,8 @@ int main(void)
        UARTprintf("\r\nMain Queue Creation Failed");
     }
 
+    UARTprintf("\r\nBegin project");
+
     tempQueue = xQueueCreate(TEMP_QUEUE_SIZE, sizeof(message_t));
     if(tempQueue == NULL)
     {
@@ -74,17 +81,27 @@ int main(void)
     /*Create different Tasks*/
     //BaseType_t xTaskCreate( TaskFunction_t pvTaskCode,const char * const pcName,unsigned short usStackDepth,void *pvParameters
     //,UBaseType_t uxPriority,TaskHandle_t *pxCreatedTask );
+
 #if 0
+    myI2CInit();
     if(xTaskCreate(tempTask, (const portCHAR *)"TemperatureTask", configMINIMAL_STACK_SIZE, NULL, 1, &tempTaskHandle) != pdPASS)
     {
         UARTprintf("\r\nTemperature Task creation failed");
     }
-#endif
+    if(xTaskCreate(chargeTask, (const portCHAR *)"ChargeTask", configMINIMAL_STACK_SIZE, NULL, 1, &chargeTaskHandle) != pdPASS)
+    {
+        UARTprintf("\r\nCharge Task creation failed");
+    }
     if(xTaskCreate(lightTask, (const portCHAR *)"LightTask", configMINIMAL_STACK_SIZE, NULL, 1, &lightTaskHandle) != pdPASS)
     {
         UARTprintf("\r\nLight Task creation failed");
     }
-
+#endif
+    myADCInit();
+    if(xTaskCreate(soilTask, (const portCHAR *)"SoilTask", configMINIMAL_STACK_SIZE, NULL, 1, &soilTaskHandle) != pdPASS)
+    {
+        UARTprintf("\r\nCharge Task creation failed");
+    }
     /*Random delay given to the main to get synchronize with the new tasks*/
   //  vTaskDelay(pdMS_TO_TICKS(500));
 
@@ -141,4 +158,45 @@ void __error__(char *pcFilename, uint32_t ui32Line)
     while (1)
     {
     }
+}
+
+void myI2CInit(void)
+{
+    /*Enable I2C0*/
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C0);
+    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_I2C0));
+
+    /*Enable GPIO*/
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOB));
+
+    /*Configure GPIOs for I2C*/
+    GPIOPinConfigure(GPIO_PB3_I2C0SDA);                /*Pin configure must be called for each pin*/
+    GPIOPinConfigure(GPIO_PB2_I2C0SCL);
+
+    GPIOPinTypeI2C(GPIO_PORTB_BASE, GPIO_PIN_3);       /*I2C0 - SDA pin*/
+    GPIOPinTypeI2CSCL(GPIO_PORTB_BASE, GPIO_PIN_2);    /*I2C0 - SCL pin*/
+
+    /*Set Clock Speed and enable Master*/
+    I2CMasterInitExpClk(I2C_LIGHT_DEVICE, sysClockSet, false);
+}
+
+
+void myADCInit(void)
+{
+    /* Enable and reset the ADC peripheral*/
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
+    SysCtlPeripheralReset(SYSCTL_PERIPH_ADC0);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
+
+    /* Configure the ADC capture sequence*/
+    ADCSequenceDisable(ADC0_BASE, SOIL_SEQ_NO);
+    ADCSequenceConfigure(ADC0_BASE, SOIL_SEQ_NO, ADC_TRIGGER_PROCESSOR, 0);
+    ADCSequenceStepConfigure(ADC0_BASE, SOIL_SEQ_NO, 0, (ADC_CTL_CH0 | ADC_CTL_IE | ADC_CTL_END));
+
+    /* Setup ADC pin and interrupts */
+    GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3);
+
+    ADCIntDisable(ADC0_BASE, SOIL_SEQ_NO);
+    ADCSequenceEnable(ADC0_BASE,SOIL_SEQ_NO);
 }

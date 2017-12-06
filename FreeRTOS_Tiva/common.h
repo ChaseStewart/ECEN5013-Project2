@@ -53,6 +53,8 @@
 //#include "task.h"
 //#include "queue.h"
 
+/*System clock rate, 120 MHz*/
+#define SYSTEM_CLOCK    120000000U
 
 /*Macro Definitions*/
 #define MAIN_QUEUE_SIZE     (10)
