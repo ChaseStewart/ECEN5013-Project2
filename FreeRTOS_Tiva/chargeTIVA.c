@@ -18,11 +18,15 @@ extern QueueHandle_t socketQueue;
 extern QueueHandle_t soilQueue;
 extern QueueHandle_t chargeQueue;
 
+
 extern uint32_t sysClockSet;
+extern bool stateRunning;
+
 void chargeTask(void *pvParameters)
 {
-
-    while(1)
+    message_t queueData;                /*Variable to store msgs read from queue*/
+    uint32_t notificationValue = 0;
+    while(stateRunning)
     {
         uint32_t queueData;
         uint16_t data = 0;
@@ -30,26 +34,36 @@ void chargeTask(void *pvParameters)
         chargeSensorInit();
         chgreadData(REG_VERSION, &data, 2);
         GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0);
-        while(1)
-        {
-            getChargeData(&data);
-            if(data < 50)
-            {
-                GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 1);   /*When dark turn ON Light*/
-            }
-            else
-            {
-                GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0);
-            }
-        }
 
-        while(1)
+        xTaskNotifyWait(0x00, ULONG_MAX, &notificationValue, portMAX_DELAY);   /*Blocks indefinitely waiting for notification*/
+        if(notificationValue & TASK_NOTIFYVAL_HEARTBEAT)
         {
-            xQueueReceive(chargeQueue,&queueData,portMAX_DELAY);       /*This is a test - Fix me*/
-            UARTprintf("\r\nCharge Received a Queue Data", queueData);
-            vTaskDelay(5000 / portTICK_PERIOD_MS);
+            sendHeartBeat(FUEL_TASK_ID);
         }
-        vTaskDelete(NULL);  /*Deletes Current task and frees up memory*/
+        if(notificationValue & TASK_NOTIFYVAL_MSGQUEUE)
+        {
+            while(errQUEUE_EMPTY != xQueueReceive(chargeQueue,(void*)&queueData,0))       /*Non-blocking call, Read Until Queue is empty*/
+            {
+                UARTprintf("\r\nCharge Task Received a Queue Data");
+                if(queueData.id == HEARTBEAT_REQ)
+                {
+                    sendHeartBeat(FUEL_TASK_ID);
+                }
+                if(queueData.id == FUEL_GAUGE_DATA_REQ)
+                {
+					/*Moved Here during Merging, FIX ME if needed*/
+					getChargeData(&data);
+					if(data < 50)
+					{
+						GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 1);   /*When dark turn ON Light*/
+					}
+					else
+					{
+						GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0);
+					}
+                }
+            }
+        }
     }
     vTaskDelete(NULL);  /*Deletes Current task and frees up memory*/
 }

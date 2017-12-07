@@ -20,31 +20,45 @@ extern QueueHandle_t soilQueue;
 extern QueueHandle_t chargeQueue;
 
 extern uint32_t sysClockSet;
+extern bool stateRunning;
+
 void lightTask(void *pvParameters)
 {
-    uint32_t queueData;
-    float data = 0;
-    uint8_t id = 0;
+    message_t queueData;        /*Variable to store msgs read from queue*/
+    uint32_t notificationValue = 0;
     lightSensorInit();
     GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
-    while(1)
+    while(stateRunning)
     {
-        lightSensorLux(&data);
-        if(data < 50)
+        xTaskNotifyWait(0x00, ULONG_MAX, &notificationValue, portMAX_DELAY);   /*Blocks indefinitely waiting for notification*/
+        if(notificationValue & TASK_NOTIFYVAL_HEARTBEAT)
         {
-            GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 1);   /*When dark turn ON Light*/
+            sendHeartBeat(LIGHT_TASK_ID);
         }
-        else
+        if(notificationValue & TASK_NOTIFYVAL_MSGQUEUE)
         {
-            GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
+            while(errQUEUE_EMPTY != xQueueReceive(lightQueue,(void*)&queueData,0))                     /*Non-blocking call, Read Until Queue is empty*/
+            {
+                UARTprintf("\r\nLight Received a Queue Data");
+                if(queueData.id == HEARTBEAT_REQ)
+                {
+                    sendHeartBeat(LIGHT_TASK_ID);
+                }
+                if(queueData.id == LIGHT_DATA_REQ)
+                {
+                    float data = 0;
+                    lightSensorLux(&data);
+                    if(data < 50)                           /*Testing Use case - FIX ME*/
+                    {
+                        GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 1);   /*When dark turn ON Light*/
+                    }
+                    else
+                    {
+                        GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
+                    }
+                }
+            }
         }
-    }
-
-    while(1)
-    {
-        xQueueReceive(lightQueue,&queueData,portMAX_DELAY);       /*This is a test - Fix me*/
-        UARTprintf("\r\nLight Received a Queue Data", queueData);
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);  /*Deletes Current task and frees up memory*/
 }

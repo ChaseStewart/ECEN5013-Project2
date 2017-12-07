@@ -61,6 +61,20 @@
 #define TEMP_QUEUE_SIZE     (10)
 #define LIGHT_QUEUE_SIZE    (10)
 #define SOCKET_QUEUE_SIZE   (10)
+#define SOIL_QUEUE_SIZE     (10)
+#define CHARGE_QUEUE_SIZE   (10)
+
+#define TASK_NOTIFYVAL_MSGQUEUE     (0x01)  /*This would be the common notification value when a msg is sent to a task*/
+#define TASK_NOTIFYVAL_HEARTBEAT    (0x02)  /*Notification Value to send Heart-beat*/
+#define ULONG_MAX                   (0xFFFFFFFF)
+
+/*HBs Tracking*/
+#define HB_OK_LIGHT      (0x01)
+#define HB_OK_TEMP       (0x02)
+#define HB_OK_SOCKET     (0x04)
+#define HB_OK_SOIL       (0x08)
+#define HB_OK_CHARGE     (0x10)
+
 
 /*Message IDs to differentiate between messages*/
 typedef enum message_type
@@ -118,5 +132,12 @@ typedef struct
 /*Global variables*/
 /*Use extern to avoid duplicate variables creation during inclusion*/
 
+/*****************************************************************
+* name  : sendHeartBeat
+* brief : This function is sends heart-beat to the main task
+* param : Task_Id - Task ID of the calling task
+* return: 0 on SUCCESS, -1 on Failure
+*****************************************************************/
+int8_t sendHeartBeat(Task_Id taskId);
 
 #endif /* COMMON_H_ */

@@ -38,17 +38,20 @@ void ISR_ADC_Read (void)
 }
 */
 
+extern bool stateRunning;
+
 void soilTask(void *pvParameters)
 {
     uint32_t humidData;
-
-    UARTprintf("\r\nInitializing Soil Task");
-
-    //soilSensorInit();
-
-    while(1)
+    message_t queueData;                /*Variable to store msgs read from queue*/
+    uint32_t notificationValue = 0;
+	
+	UARTprintf("\r\nInitializing Soil Task");
+	 
+    while(stateRunning)
     {
-        /* trigger an ADC read*/
+		/*********************************Used for testing*************************/
+		/* trigger an ADC read*/
         ADCProcessorTrigger(ADC0_BASE, SOIL_SEQ_NO);
 
         /* wait for ADC to read and clear int */
@@ -63,9 +66,28 @@ void soilTask(void *pvParameters)
 
         /* delay for 1/2 of a second */
         SysCtlDelay(SYSTEM_CLOCK/3/2);
+		/**************************************************************************/
+        xTaskNotifyWait(0x00, ULONG_MAX, &notificationValue, portMAX_DELAY);   /*Blocks indefinitely waiting for notification*/
+        if(notificationValue & TASK_NOTIFYVAL_HEARTBEAT)
+        {
+            sendHeartBeat(SOIL_TASK_ID);
+        }
+        if(notificationValue & TASK_NOTIFYVAL_MSGQUEUE)
+        {
+            while(errQUEUE_EMPTY != xQueueReceive(soilQueue,(void*)&queueData,0))                     /*Non-blocking call, Read Until Queue is empty*/
+            {
+                UARTprintf("\r\nSoil Task Received a Queue Data");
+                if(queueData.id == HEARTBEAT_REQ)
+                {
+                    sendHeartBeat(SOIL_TASK_ID);
+                }
+                if(queueData.id == SOIL_MOIST_DATA_REQ)
+                {
 
+                }
+            }
+        }
     }
-
     vTaskDelete(NULL);  /*Deletes Current task and frees up memory*/
 }
 

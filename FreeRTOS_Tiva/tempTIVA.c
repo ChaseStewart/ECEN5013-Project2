@@ -17,20 +17,34 @@ extern QueueHandle_t socketQueue;
 extern QueueHandle_t soilQueue;
 extern QueueHandle_t chargeQueue;
 
+extern bool stateRunning;
+
 void tempTask(void *pvParameters)
 {
-    uint32_t queueData = 0;
-    while(1)
+    message_t queueData;                /*Variable to store msgs read from queue*/
+    uint32_t notificationValue = 0;
+    while(stateRunning)
     {
+        xTaskNotifyWait(0x00, ULONG_MAX, &notificationValue, portMAX_DELAY);   /*Blocks indefinitely waiting for notification*/
+        if(notificationValue & TASK_NOTIFYVAL_HEARTBEAT)
+        {
+           sendHeartBeat(TEMP_TASK_ID);
+        }
+        if(notificationValue & TASK_NOTIFYVAL_MSGQUEUE)
+        {
+            while(errQUEUE_EMPTY != xQueueReceive(tempQueue,(void*)&queueData,0))                     /*Non-blocking call, Read Until Queue is empty*/
+            {
+                UARTprintf("\r\nTemp Task Received a Queue Data");
+                if(queueData.id == HEARTBEAT_REQ)
+                {
+                    sendHeartBeat(TEMP_TASK_ID);
+                }
+                if(queueData.id == TEMP_DATA_REQ)
+                {
 
-        GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 1);
-        vTaskDelay(2000);
-
-        GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
-        vTaskDelay(2000);
-
-        xQueueSend( lightQueue,&queueData,portMAX_DELAY);  /*This is a test - Fix me*/
-        queueData++;
+                }
+            }
+        }
     }
     vTaskDelete(NULL);  /*Deletes Current task and frees up memory*/
 }

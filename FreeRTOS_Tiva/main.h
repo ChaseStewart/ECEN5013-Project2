@@ -9,6 +9,7 @@
 #define MAIN_H_
 
 #include "common.h"
+#include "timers.h"
 
 /*Function Declarations*/
 
@@ -19,6 +20,15 @@
 * return: 0 on SUCCESS, -1 on Failure
 *****************************************************************/
 int main(void);
+
+/*****************************************************************
+* name  : mainTask
+* brief : This function is the thread for the main task to handle
+*         heartbeats
+* param : Pointer to a required data
+* return: 0 on SUCCESS, -1 on Failure
+*****************************************************************/
+void mainTask(void *pvParameters);
 
 /*****************************************************************
 * name  : sendDataFromMain
@@ -37,6 +47,22 @@ int8_t sendDataFromMain(QueueHandle_t queue, Message_Type msgID, int32_t data);
 * return: 0 on SUCCESS, -1 on Failure
 *****************************************************************/
 int8_t logFromMain(uint8_t* data);
+
+/*****************************************************************
+* name  : hbTimerCB
+* brief : Notifies the tasks to send heartbeat when the timer expires
+* param : Timer Handle
+* return: None
+*****************************************************************/
+void hbTimerCB(TimerHandle_t xTimer);
+
+/*****************************************************************
+* name  : wdTimerCB
+* brief : Notifies the main task to check the received heart-beats
+* param : Timer Handle
+* return: None
+*****************************************************************/
+void wdTimerCB(TimerHandle_t xTimer);
 
 
 /****************************************************************
