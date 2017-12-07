@@ -28,11 +28,9 @@ void chargeTask(void *pvParameters)
     uint32_t notificationValue = 0;
     while(stateRunning)
     {
-        uint32_t queueData;
         uint16_t data = 0;
-        uint8_t id = 0;
         chargeSensorInit();
-        chgreadData(REG_VERSION, &data, 2);
+        //chgreadData(REG_VERSION, &data, 2);       /*Used for Testing - FIX ME*/
         GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0);
 
         xTaskNotifyWait(0x00, ULONG_MAX, &notificationValue, portMAX_DELAY);   /*Blocks indefinitely waiting for notification*/
@@ -70,7 +68,6 @@ void chargeTask(void *pvParameters)
 
 void chargeSensorInit(void)
 {
-    int i;
     uint8_t alert_amt[2];   /* set HW interrupt to go at 32% */
     uint8_t reset[2];       /* Force a reset of the sensor */
 
@@ -99,7 +96,7 @@ void chargeSensorInit(void)
     I2CMasterInitExpClk(I2C_DEVICE, sysClockSet, false);
 
     /* set sensor to reset */
-     writeNBytes(REG_CONFIG_RESET, alert_amt, 2);
+    writeNBytes(REG_CONFIG_RESET, alert_amt, 2);
 
     /* set sensor to alarm at 32% charge */
     writeNBytes(REG_CONFIG_ALERT_PCT, reset, 2);
@@ -298,5 +295,5 @@ int8_t getChargeData(uint16_t *charge_amt)
     temp = ((low_byte|(high_byte << 8)) >> 4 );
     final = (uint16_t ) (1.25 * temp);
     charge_amt = &final;
-
+    return 0;
 }
