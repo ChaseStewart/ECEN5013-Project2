@@ -179,14 +179,6 @@ static err_t socket_accept(void *arg, struct tcp_pcb *pcb, err_t err)
     /* Set priority */
     tcp_setprio(pcb, SOCKET_TCP_PRIO);
 
-    /* Allocate memory for the structure that holds the state of the
-     connection - initialized by that function. */
-    hs = http_state_alloc();
-    if (hs == NULL) {
-        UARTprintf("\r\nhttp_accept: Out of memory, RST");
-        return ERR_MEM;
-    }
-
     /* Tell TCP that this is the structure we wish to be passed for our
      callbacks. */
     tcp_arg(pcb, hs);
@@ -268,5 +260,7 @@ void DisplayIPAddress(uint32_t ui32Addr)
     UARTprintf(pcBuf);
 }
 
-
+void lwIPHostTimerHandler(void)
+{
+}
 
