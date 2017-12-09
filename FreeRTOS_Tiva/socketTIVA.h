@@ -11,13 +11,13 @@
 #include "utils/lwiplib.h"
 
 /* interrupt priority modes */
-#define SYSTICK_INT_PRIORITY    0x80
-#define ETHERNET_INT_PRIORITY   0xC0
-#define SOCKET_TCP_PRIO        TCP_PRIO_MIN
+#define SYSTICK_INT_PRIORITY        0x80
+#define ETHERNET_INT_PRIORITY       0xC0
+#define SOCKET_TCP_PRIO             TCP_PRIO_MIN
 
 /* socket definitions */
-#define SOCKET_PORT                 80
-#define SOCKET_POLL_INTERVAL         4
+#define SOCKET_PORT                 50021
+#define SOCKET_POLL_INTERVAL        4
 
 
 /****************************************************************
@@ -111,6 +111,16 @@ static void socket_err(void *arg, err_t err);
 *****************************************************************/
 void DisplayIPAddress(uint32_t ui32Addr);
 
+
+//*****************************************************************************
+//
+// Required by lwIP library to support any host-related timer functions.
+//
+//*****************************************************************************
+void lwIPHostTimerHandler(void);
+
+
+void mySysTickHandler(void);
 
 
 #endif /* SOCKETTIVA_H_ */

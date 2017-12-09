@@ -26,16 +26,17 @@ extern QueueHandle_t soilQueue;
 extern QueueHandle_t chargeQueue;
 
 extern bool stateRunning;
-
+int32_t g_ui32IPAddress;
 
 void socketTask(void *pvParameters)
 {
     uint8_t pui8MACArray[8];            /* Variable to store the MAC address */
     message_t queueData;                /* Variable to store msgs read from queue */
     uint32_t notificationValue = 0;
-    uint32_t retval;
-    uint32_t ui32NewIPAddress, ui32User0, ui32User1;
+    uint32_t ui32User0, ui32User1;
+    uint32_t g_ui32IPAddress = 0;
 
+    stateRunning = true;
     /* Thanks to TI for the enet_lwip example code to get an IP below. */
 
     //
@@ -51,7 +52,7 @@ void socketTask(void *pvParameters)
         // not been programmed into the device.  Exit the program.
         // Let the user know there is no MAC address
         //
-        UARTprintf("No MAC programmed!\n");
+        UARTprintf("\r\nNo MAC programmed!\n");
         while(1)
         {
         }
@@ -60,7 +61,7 @@ void socketTask(void *pvParameters)
     //
     // Tell the user what we are doing just now.
     //
-    UARTprintf("Waiting for IP.\n");
+    UARTprintf("\r\nWaiting for IP.\n");
 
     //
     // Convert the 24/24 split MAC address from NV ram into a 32/16 split MAC
@@ -80,12 +81,6 @@ void socketTask(void *pvParameters)
     lwIPInit(SYSTEM_CLOCK, pui8MACArray, 0, 0, 0, IPADDR_USE_DHCP);
 
     //
-    // Get the current IP address.
-    //
-    ui32NewIPAddress = lwIPLocalIPAddrGet();
-    DisplayIPAddress(ui32NewIPAddress);
-
-    //
     // Setup the device locator service.
     //
     LocatorInit();
@@ -102,11 +97,12 @@ void socketTask(void *pvParameters)
     MAP_IntPrioritySet(INT_EMAC0, ETHERNET_INT_PRIORITY);
     MAP_IntPrioritySet(FAULT_SYSTICK, SYSTICK_INT_PRIORITY);
 
+
     tcp_socket_init(IP_ADDR_ANY);
 
     while(stateRunning)
     {
-        xTaskNotifyWait(0x00, ULONG_MAX, &notificationValue, portMAX_DELAY);   /*Blocks indefinitely waiting for notification*/
+        //xTaskNotifyWait(0x00, ULONG_MAX, &notificationValue, portMAX_DELAY);   /*Blocks indefinitely waiting for notification*/
         if(notificationValue & TASK_NOTIFYVAL_HEARTBEAT)
         {
             sendHeartBeat(SOCKET_TASK_ID);
@@ -131,6 +127,7 @@ void socketTask(void *pvParameters)
 }
 
 
+
 void tcp_socket_init(uint32_t local_addr)
 {
     struct tcp_pcb *pcb;
@@ -146,10 +143,11 @@ void tcp_socket_init(uint32_t local_addr)
 
     /* set SOF_REUSEADDR here to explicitly bind httpd to multiple interfaces */
     err = tcp_bind(pcb, local_addr, SOCKET_PORT);
-    if ( err == ERR_OK )
+    if ( err != ERR_OK )
     {
-        UARTprintf("\r\nhttpd_init: tcp_bind failed");
+        UARTprintf("\r\nhttpd_init: tcp_bind failed with error %d", err);
     }
+    UARTprintf("\r\nBound to port %d", SOCKET_PORT);
 
     pcb = tcp_listen(pcb);
     if (pcb == NULL)
@@ -168,7 +166,6 @@ void tcp_socket_init(uint32_t local_addr)
  */
 static err_t socket_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 {
-    struct http_state *hs;
     struct tcp_pcb_listen *lpcb = (struct tcp_pcb_listen*)arg;
 
     UARTprintf("socket_accept %p / %p\n", (void*)pcb, arg);
@@ -181,7 +178,7 @@ static err_t socket_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 
     /* Tell TCP that this is the structure we wish to be passed for our
      callbacks. */
-    tcp_arg(pcb, hs);
+    tcp_arg(pcb, pcb);
 
     /* Set up the various callback functions */
     tcp_recv(pcb, socket_recv);
@@ -215,9 +212,7 @@ static err_t socket_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t e
     packet_len = p->len;
     inbuffer = (char *) malloc(packet_len);
 
-    memcpy(inbuffer, p->payload, packet_len);
-
-    UARTprintf("\r\nReceived data: %s", inbuffer);
+    UARTprintf("\r\nReceived data: %s", (char *)p->payload);
     return ERR_OK;
 }
 
@@ -247,20 +242,97 @@ static err_t socket_close_conn(struct tcp_pcb *pcb)
     return err;
 }
 
+
+
 void DisplayIPAddress(uint32_t ui32Addr)
 {
     char pcBuf[16];
 
-    /* Convert the IP Address into a string. */
+    // Convert the IP Address into a string.
     usprintf(pcBuf, "%d.%d.%d.%d", ui32Addr & 0xff, (ui32Addr >> 8) & 0xff,
             (ui32Addr >> 16) & 0xff, (ui32Addr >> 24) & 0xff);
 
-    /* Display the string. */
-    UARTprintf("IP Address: ");
+    // Display the string.
+    UARTprintf("\r\nIP Addr is: ");
     UARTprintf(pcBuf);
 }
 
-void lwIPHostTimerHandler(void)
+
+void mySysTickHandler(void)
 {
+    //
+    // Call the lwIP timer handler.
+    //
+    lwIPTimer(10);
 }
 
+
+
+void lwIPHostTimerHandler(void)
+{
+    uint32_t ui32Idx, ui32NewIPAddress;
+
+
+    // Get the current IP address.
+    ui32NewIPAddress = lwIPLocalIPAddrGet();
+
+    // See if the IP address has changed.
+    if(ui32NewIPAddress != g_ui32IPAddress)
+    {
+        // See if there is an IP address assigned.
+        if(ui32NewIPAddress == 0xffffffff)
+        {
+            // Indicate that there is no link.
+            UARTprintf("\r\nWaiting for link.");
+        }
+        else if(ui32NewIPAddress == 0)
+        {
+            //
+            // There is no IP address, so indicate that the DHCP process is
+            // running.
+            //
+            UARTprintf("\r\nWaiting for IP address.\n");
+        }
+        else
+        {
+            //
+            // Display the new IP address.
+            //
+            UARTprintf("IP Address: ");
+            DisplayIPAddress(ui32NewIPAddress);
+            UARTprintf("\nOpen a browser and enter the IP address.\n");
+        }
+
+        //
+        // Save the new IP address.
+        //
+        g_ui32IPAddress = ui32NewIPAddress;
+
+        //
+        // Turn GPIO off.
+        //
+        MAP_GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, ~GPIO_PIN_1);
+    }
+
+    //
+    // If there is not an IP address.
+    //
+    if((ui32NewIPAddress == 0) || (ui32NewIPAddress == 0xffffffff))
+    {
+        //
+        // Loop through the LED animation.
+        //
+        for(ui32Idx = 1; ui32Idx < 17; ui32Idx++)
+        {
+
+            //
+            // Toggle the GPIO
+            //
+            MAP_GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1,
+                    (MAP_GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_1) ^
+                     GPIO_PIN_1));
+
+            SysCtlDelay(SYSTEM_CLOCK/(ui32Idx << 1));
+        }
+    }
+}
