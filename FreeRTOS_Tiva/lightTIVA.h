@@ -37,9 +37,6 @@
 #define BIT_INT_DISABLE         0x00
 #define BIT_INT_ENABLE          0x01
 
-#define WRITE_FLAG  false
-#define READ_FLAG   true
-
 /****************************************************************
 * name  : lightTask
 * brief : This function is the start of the Light Tasks which
