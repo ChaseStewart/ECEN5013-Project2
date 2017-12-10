@@ -74,6 +74,7 @@
 /* Scheduler includes. */
 #include "FreeRTOS.h"
 #include "task.h"
+#include "utils/lwiplib.h"
 
 #ifndef __TI_VFP_SUPPORT__
 	#error This port can only be used when the project options are configured to enable hardware floating point support.
@@ -388,6 +389,7 @@ void xPortSysTickHandler( void )
 		}
 	}
 	portCLEAR_INTERRUPT_MASK_FROM_ISR( 0 );
+	lwIPTimer(10);
 }
 /*-----------------------------------------------------------*/
 

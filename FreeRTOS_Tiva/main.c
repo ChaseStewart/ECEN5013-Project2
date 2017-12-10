@@ -24,7 +24,7 @@ QueueHandle_t soilQueue;
 QueueHandle_t chargeQueue;
 
 /*Task state variables*/
-bool stateRunning = false;
+bool stateRunning = true;
 
 /*Task Handles*/
 TaskHandle_t lightTaskHandle;
@@ -35,7 +35,6 @@ TaskHandle_t mainTaskHandle;
 TaskHandle_t socketTaskHandle;
 TaskHandle_t soilTaskHandle;
 TaskHandle_t chargeTaskHandle;
-
 
 uint32_t sysClockSet = 0;
 
@@ -60,7 +59,7 @@ int main(void)
     PinoutSet(false, false);
 
     /*Setup UART connected to Virtual COM Port for logging*/
-    UARTStdioConfig(0, 57600, SYSTEM_CLOCK);
+    UARTStdioConfig(0, 115200, SYSTEM_CLOCK);
 
     /*Creating Queues*/
     mainQueue = xQueueCreate(MAIN_QUEUE_SIZE, sizeof(message_t));
@@ -69,7 +68,7 @@ int main(void)
        UARTprintf("\r\nMain Queue Creation Failed");
     }
 
-    UARTprintf("\r\nBegin project");
+    UARTprintf("\r\n\n*** Begin project ***");
 
     tempQueue = xQueueCreate(TEMP_QUEUE_SIZE, sizeof(message_t));
     if(tempQueue == NULL)
@@ -82,7 +81,6 @@ int main(void)
     {
        UARTprintf("\r\nLight Queue Creation Failed");
     }
-
     socketQueue = xQueueCreate(SOCKET_QUEUE_SIZE, sizeof(message_t));
     if(socketQueue == NULL)
     {
@@ -100,6 +98,7 @@ int main(void)
         UARTprintf("\r\nCharge Queue Creation Failed");
     }
 
+
     /*Create a timer for heart-beats*/
     hbTimerHandle = xTimerCreate("HBTimer",pdMS_TO_TICKS(3000),pdTRUE,(void*)0,hbTimerCB);
     if( hbTimerHandle == NULL )
@@ -107,7 +106,6 @@ int main(void)
         UARTprintf("\r\nTimer Creation Failed");
         return -1;
     }
-
     /*Create a timer for watchdog*/
     wdTimerHandle = xTimerCreate("WDTimer",pdMS_TO_TICKS(6000),pdTRUE,(void*)0,wdTimerCB);  /*This timer checks if all the tasks has sent the notification*/
     if( wdTimerHandle == NULL )
@@ -122,12 +120,14 @@ int main(void)
     /*Create different Tasks*/
     //BaseType_t xTaskCreate( TaskFunction_t pvTaskCode,const char * const pcName,unsigned short usStackDepth,void *pvParameters
     //,UBaseType_t uxPriority,TaskHandle_t *pxCreatedTask );
+
     if(xTaskCreate(mainTask, (const portCHAR *)"MainTask", configMINIMAL_STACK_SIZE, NULL, 1, &mainTaskHandle) != pdPASS)
     {
         UARTprintf("\r\nMain Task creation failed");
         stateRunning = false;
         return -1;
     }
+
     if(xTaskCreate(lightTask, (const portCHAR *)"LightTask", configMINIMAL_STACK_SIZE, NULL, 2, &lightTaskHandle) != pdPASS)
     {
         UARTprintf("\r\nLight Task creation failed");
@@ -142,7 +142,7 @@ int main(void)
     }
     if(xTaskCreate(socketTask, (const portCHAR *)"SocketTask", configMINIMAL_STACK_SIZE, NULL, 4, &socketTaskHandle) != pdPASS)
     {
-        UARTprintf("\r\nTemperature Task creation failed");
+        UARTprintf("\r\Socket Task creation failed");
         stateRunning = false;
         return -1;
     }
@@ -199,7 +199,7 @@ void mainTask(void *pvParameters)
            }
            else
            {
-               stateRunning = false;
+               //stateRunning = false;
                hbFlags = 0;
            }
        }
@@ -252,6 +252,8 @@ void mainTask(void *pvParameters)
     vTaskDelete(NULL);  /*Deletes Current task and frees up memory*/
     return 0;
 }
+
+
 int8_t sendDataFromMain(QueueHandle_t queue, Message_Type msgID, int32_t data)
 {
     message_t message;
@@ -279,6 +281,7 @@ int8_t logFromMain(uint8_t* data)
     {
         UARTprintf("\r\nMain Task Sending to Socket failed");
     }
+
     return 0;
 }
 

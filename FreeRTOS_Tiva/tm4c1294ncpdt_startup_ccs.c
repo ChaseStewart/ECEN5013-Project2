@@ -43,6 +43,9 @@ static void IntDefaultHandler(void);
 //*****************************************************************************
 extern void _c_int00(void);
 
+extern void lwIPEthernetIntHandler(void);
+
+
 //*****************************************************************************
 //
 // Linker variable that marks the top of the stack.
@@ -58,7 +61,7 @@ extern uint32_t __STACK_TOP;
 extern void xPortPendSVHandler(void);
 extern void vPortSVCHandler(void);
 extern void xPortSysTickHandler(void);
-
+extern void mySysTickHandler(void);
 
 //*****************************************************************************
 //
@@ -86,7 +89,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // Debug monitor handler
     0,                                      // Reserved
     xPortPendSVHandler,                     // The PendSV handler
-    xPortSysTickHandler,                    // The SysTick handler
+    xPortSysTickHandler,//mySysTickHandler,                    // The SysTick handler
     IntDefaultHandler,                      // GPIO Port A
     IntDefaultHandler,                      // GPIO Port B
     IntDefaultHandler,                      // GPIO Port C
@@ -127,7 +130,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // I2C1 Master and Slave
     IntDefaultHandler,                      // CAN0
     IntDefaultHandler,                      // CAN1
-    IntDefaultHandler,                      // Ethernet
+    lwIPEthernetIntHandler,                      // Ethernet
     IntDefaultHandler,                      // Hibernate
     IntDefaultHandler,                      // USB0
     IntDefaultHandler,                      // PWM Generator 3
