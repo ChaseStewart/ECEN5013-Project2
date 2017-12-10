@@ -9,43 +9,28 @@
 #ifndef I2CTIVA_H_
 #define I2CTIVA_H_
 
-/* Hardware */
-#define I2C_DEVICE          I2C0_BASE
-
 /* I2C defs */
 #define WRITE_FLAG          false
 #define READ_FLAG           true
 
 /****************************************************************
-* name  : writeOneByte
+* name  : I2CInit
+* brief : Initialize the I2C bus for fuel gauge, temp sensor, and light sensor
+* param : None
+* return: None
+*****************************************************************/
+void myI2CInit(void);
+
+/****************************************************************
+* name  : writeI2CData
 * brief : use I2C to write 1 byte to provided register
-* param : uint8_t slaveAddr - the slave register for the sensor
+* param : uint32_t i2cDevice - Base address of the I2C device
+* param : uint8_t slaveAddress - the slave register for the sensor
 * param : uint8_t regAddr   - the I2C register into which to write
 * param : uint8_t data      - a pointer to the data that should be written
 * return: int8_t status     - 0 is success else failure
 *****************************************************************/
-int8_t writeOneByte(uint8_t slaveAddr, uint8_t regAddr, uint8_t data);
-
-/****************************************************************
-* name  : writeNBytes
-* brief : use I2C to write N bytes to provided register
-* param : uint8_t slaveAddr - the slave register for the sensor
-* param : uint8_t regAddr   - the I2C register into which to write
-* param : uint8_t *data     - the data that should be written
-* param : uint8_t bytes     - the number of bytes of data
-* return: int8_t status     - 0 is success else failure
-*****************************************************************/
-int8_t writeNBytes(uint8_t slaveAddr, uint8_t regAddr, uint8_t *data, uint8_t bytes);
-
-/****************************************************************
-* name  : readOneByte
-* brief : use I2C to read 1 byte from provided register
-* param : uint8_t slaveAddr - the slave register for the sensor
-* param : uint8_t regAddr   - the I2C register from which to read
-* param : uint8_t data      - a pointer to the variable to receive the data
-* return: int8_t status     - 0 is success else failure
-*****************************************************************/
-int8_t readOneByte(uint8_t slaveAddr, uint8_t regAddr, uint8_t *data);
+int8_t writeI2CData(uint32_t i2cDevice, uint8_t regAddr, uint8_t data, uint8_t slaveAddress);
 
 /****************************************************************
 * name  : readNBytes
@@ -56,7 +41,6 @@ int8_t readOneByte(uint8_t slaveAddr, uint8_t regAddr, uint8_t *data);
 * param : uint8_t bytes     - the number of bytes of data
 * return: int8_t status     - 0 is success else failure
 *****************************************************************/
-int8_t readNBytes(uint8_t slaveAddr, uint8_t regAddr, uint8_t *data, uint8_t bytes);
-
+int8_t readI2CData(uint32_t i2cDevice, uint8_t regAddr, uint8_t *data, uint8_t bytes, uint8_t slaveAddress);
 
 #endif /* I2CTIVA_H_ */

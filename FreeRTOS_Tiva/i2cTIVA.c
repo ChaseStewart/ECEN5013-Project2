@@ -7,158 +7,135 @@
 
 #include "common.h"
 #include "i2cTIVA.h"
+#include "semphr.h"
 #include "driverlib/i2c.h"
 #include "driverlib/pin_map.h"
 
-int8_t writeOneByte(uint8_t slaveAddr, uint8_t regAddr, uint8_t data)
+extern SemaphoreHandle_t I2CMutex;
+
+void myI2CInit(void)
 {
+    /*Enable I2C0*/
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C0);
+    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_I2C0));
+
+    /*Enable GPIO*/
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOB));
+
+    /*Configure GPIOs for I2C*/
+    GPIOPinConfigure(GPIO_PB3_I2C0SDA);                /*Pin configure must be called for each pin*/
+    GPIOPinConfigure(GPIO_PB2_I2C0SCL);
+
+    GPIOPinTypeI2C(GPIO_PORTB_BASE, GPIO_PIN_3);       /*I2C0 - SDA pin*/
+    GPIOPinTypeI2CSCL(GPIO_PORTB_BASE, GPIO_PIN_2);    /*I2C0 - SCL pin*/
+
+    /*Set Clock Speed and enable Master*/
+    I2CMasterInitExpClk(I2C0_BASE, SYSTEM_CLOCK, false);
+}
+
+
+int8_t writeI2CData(uint32_t i2cDevice, uint8_t regAddr, uint8_t data, uint8_t slaveAddress)
+{
+    xSemaphoreTake(I2CMutex, portMAX_DELAY);
+    taskDISABLE_INTERRUPTS();
     /*Set Slave Address*/
-    I2CMasterSlaveAddrSet(I2C_DEVICE, slaveAddr, WRITE_FLAG);
+    I2CMasterSlaveAddrSet(i2cDevice, slaveAddress, WRITE_FLAG);
 
     /*Reg Address to be sent*/
-    I2CMasterDataPut(I2C_DEVICE, regAddr);
+    I2CMasterDataPut(i2cDevice, regAddr);
 
     /*Start Send*/
-    I2CMasterControl(I2C_DEVICE, I2C_MASTER_CMD_SINGLE_SEND);
+    I2CMasterControl(i2cDevice, I2C_MASTER_CMD_SINGLE_SEND);
 
     /*Wait for send complete*/
-    while (!(I2CMasterBusy(I2C0_BASE)));
-    while(I2CMasterBusy(I2C_DEVICE));
+    while (!(I2CMasterBusy(i2cDevice)));
+    while(I2CMasterBusy(i2cDevice));
 
-    if(I2CMasterErr(I2C_DEVICE) != I2C_MASTER_ERR_NONE)
+    if(I2CMasterErr(i2cDevice) != I2C_MASTER_ERR_NONE)
     {
-        return -1;
     }
 
     /*Data to be sent*/
-    I2CMasterDataPut(I2C0_BASE, data);
+    I2CMasterDataPut(i2cDevice, data);
 
     /*Start Send*/
-    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
+    I2CMasterControl(i2cDevice, I2C_MASTER_CMD_SINGLE_SEND);
 
     /*Wait for send complete*/
   //  while (!(I2CMasterBusy(I2C0_BASE)));
-    while(I2CMasterBusy(I2C0_BASE));
+    while(I2CMasterBusy(i2cDevice));
 
-    if(I2CMasterErr(I2C_DEVICE) != I2C_MASTER_ERR_NONE)
+    if(I2CMasterErr(i2cDevice) != I2C_MASTER_ERR_NONE)
     {
-        return -1;
     }
-
+    taskENABLE_INTERRUPTS();
+    xSemaphoreGive(I2CMutex);
     return 0;
 }
 
-int8_t writeNBytes(uint8_t slaveAddr, uint8_t regAddr, uint8_t *data, uint8_t bytes)
+int8_t readI2CData(uint32_t i2cDevice, uint8_t regAddr, uint8_t *data, uint8_t bytes, uint8_t slaveAddress)
 {
-    /* TODO FIXME write this */
-    return 0;
-}
-
-int8_t readOneByte(uint8_t slaveAddr, uint8_t regAddr, uint8_t *data)
-{
+    xSemaphoreTake(I2CMutex, portMAX_DELAY);
+    taskDISABLE_INTERRUPTS();
     uint32_t receivedValue = 0;
 
     /*Set Slave Address to write*/
-    I2CMasterSlaveAddrSet(I2C_DEVICE, slaveAddr, WRITE_FLAG);
+    I2CMasterSlaveAddrSet(i2cDevice, slaveAddress, WRITE_FLAG);
 
     /*Reg Address to be sent*/
-    I2CMasterDataPut(I2C_DEVICE, regAddr);
+    I2CMasterDataPut(i2cDevice, regAddr);
 
     /*Start Send*/
-    I2CMasterControl(I2C_DEVICE, I2C_MASTER_CMD_BURST_SEND_START);
+    I2CMasterControl(i2cDevice, I2C_MASTER_CMD_BURST_SEND_START);
 
     /*Wait for send complete*/
-    while (!(I2CMasterBusy(I2C0_BASE)));
-    while(I2CMasterBusy(I2C_DEVICE));
+    while (!(I2CMasterBusy(i2cDevice)));
+    while(I2CMasterBusy(i2cDevice));
 
-    if(I2CMasterErr(I2C_DEVICE) != I2C_MASTER_ERR_NONE)
+    if(I2CMasterErr(i2cDevice) != I2C_MASTER_ERR_NONE)
     {
         //return -1;
     }
 
     /*Set Slave Address to Read*/
-    I2CMasterSlaveAddrSet(I2C_DEVICE, slaveAddr, READ_FLAG);
+    I2CMasterSlaveAddrSet(i2cDevice, slaveAddress, READ_FLAG);
 
-    /*Start Receive*/
-    I2CMasterControl(I2C_DEVICE, I2C_MASTER_CMD_SINGLE_RECEIVE);
-
-    /*Wait for send complete*/
-    while(!(I2CMasterBusy(I2C_DEVICE)));
-    while(I2CMasterBusy(I2C_DEVICE));
-    if(I2CMasterErr(I2C_DEVICE) != I2C_MASTER_ERR_NONE)
-    {
-       //return -1;
-    }
-    receivedValue = I2CMasterDataGet(I2C_DEVICE);
-    *data = (uint8_t)receivedValue;
-
-    return 0;
-}
-
-int8_t readNBytes(uint8_t slaveAddr, uint8_t regAddr, uint8_t *data, uint8_t bytes)
-{
-    uint8_t idx;
-    uint32_t receivedValue = 0;
-
-    /*Set Slave Address to write*/
-    I2CMasterSlaveAddrSet(I2C_DEVICE, slaveAddr, WRITE_FLAG);
-
-    /*Reg Address to be sent*/
-    I2CMasterDataPut(I2C_DEVICE, regAddr);
-
-    /*Start Send*/
-    I2CMasterControl(I2C_DEVICE, I2C_MASTER_CMD_BURST_SEND_START);
-
-    /*Wait for send complete*/
-    while (!(I2CMasterBusy(I2C0_BASE)));
-    while(I2CMasterBusy(I2C_DEVICE));
-
-    if(I2CMasterErr(I2C_DEVICE) != I2C_MASTER_ERR_NONE)
-    {
-        //return -1;
-    }
-
-    /*Set Slave Address to Read*/
-    I2CMasterSlaveAddrSet(I2C_DEVICE, slaveAddr, READ_FLAG);
-
-    /*Start Receive*/
-    I2CMasterControl(I2C_DEVICE, I2C_MASTER_CMD_BURST_RECEIVE_START);
-
-    /*Wait for send complete*/
-    while(!(I2CMasterBusy(I2C_DEVICE)));
-    while(I2CMasterBusy(I2C_DEVICE));
-    if(I2CMasterErr(I2C_DEVICE) != I2C_MASTER_ERR_NONE)
-    {
-       //return -1;
-    }
-    receivedValue = I2CMasterDataGet(I2C_DEVICE);
-    *data = (uint8_t)receivedValue;
-
-    for (idx = 1; idx < bytes-1; idx++)
+    if(bytes == 1)
     {
         /*Start Receive*/
-        I2CMasterControl(I2C_DEVICE, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
+        I2CMasterControl(i2cDevice, I2C_MASTER_CMD_SINGLE_RECEIVE);
+    }
+    else
+    {
+        /*Start Receive*/
+        I2CMasterControl(i2cDevice, I2C_MASTER_CMD_BURST_RECEIVE_START);
+    }
+    /*Wait for send complete*/
+    while(!(I2CMasterBusy(i2cDevice)));
+    while(I2CMasterBusy(i2cDevice));
+    if(I2CMasterErr(i2cDevice) != I2C_MASTER_ERR_NONE)
+    {
+       //return -1;
+    }
+    receivedValue = I2CMasterDataGet(i2cDevice);
+    *data = (uint8_t)receivedValue;
+
+    if(bytes == 2)
+    {
+        /*Start Receive*/
+        I2CMasterControl(i2cDevice, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
         /*Wait for send complete*/
-        while(!(I2CMasterBusy(I2C0_BASE)));
-        while(I2CMasterBusy(I2C_DEVICE));
-        if(I2CMasterErr(I2C_DEVICE) != I2C_MASTER_ERR_NONE)
+        while(!(I2CMasterBusy(i2cDevice)));
+        while(I2CMasterBusy(i2cDevice));
+        if(I2CMasterErr(i2cDevice) != I2C_MASTER_ERR_NONE)
         {
            //return -1;
         }
-        receivedValue = I2CMasterDataGet(I2C_DEVICE);
+        receivedValue = I2CMasterDataGet(i2cDevice);
         *(data+1) = (uint8_t)receivedValue;
     }
-    /*Start Receive*/
-    I2CMasterControl(I2C_DEVICE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
-    /*Wait for send complete*/
-    while(!(I2CMasterBusy(I2C0_BASE)));
-    while(I2CMasterBusy(I2C_DEVICE));
-    if(I2CMasterErr(I2C_DEVICE) != I2C_MASTER_ERR_NONE)
-    {
-       //return -1;
-    }
-    receivedValue = I2CMasterDataGet(I2C_DEVICE);
-    *(data+1) = (uint8_t)receivedValue;
-
+    taskENABLE_INTERRUPTS();
+    xSemaphoreGive(I2CMutex);
     return 0;
 }

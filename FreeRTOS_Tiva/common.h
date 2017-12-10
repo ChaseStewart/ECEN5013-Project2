@@ -35,24 +35,6 @@
 #include "task.h"
 #include "queue.h"
 
-//
-///*TIVA Files Included*/
-//#include "driverlib/sysctl.h"
-//#include "driverlib/debug.h"
-//#include "driverlib/rom.h"
-//#include "driverlib/rom_map.h"
-//#include "driverlib/gpio.h"
-//#include "drivers/pinout.h"
-//#include "utils/uartstdio.h"
-//#include "inc/hw_memmap.h"
-//#include "inc/hw_types.h"
-//
-///*Free RTOS Requirements*/
-//#include "FreeRTOSConfig.h"
-//#include "FreeRTOS.h"
-//#include "task.h"
-//#include "queue.h"
-
 /*System clock rate, 120 MHz*/
 #define SYSTEM_CLOCK    120000000U
 
@@ -74,10 +56,6 @@
 #define HB_OK_SOCKET     (0x04)
 #define HB_OK_SOIL       (0x08)
 #define HB_OK_CHARGE     (0x10)
-
-/*I2C Read-Write flags*/
-#define WRITE_FLAG  false
-#define READ_FLAG   true
 
 /*Message IDs to differentiate between messages*/
 typedef enum message_type
