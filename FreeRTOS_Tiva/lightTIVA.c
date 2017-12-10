@@ -92,14 +92,14 @@ int8_t writeData(uint8_t regAddr, uint8_t data)
    // I2CMasterSlaveAddrSet(I2C_LIGHT_DEVICE, LIGHT_SLAVE_ADDRESS, WRITE_FLAG);
 
     /*Data to be sent*/
-    I2CMasterDataPut(I2C0_BASE, data);
+    I2CMasterDataPut(I2C_LIGHT_DEVICE, data);
 
     /*Start Send*/
-    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
+    I2CMasterControl(I2C_LIGHT_DEVICE, I2C_MASTER_CMD_SINGLE_SEND);
 
     /*Wait for send complete*/
   //  while (!(I2CMasterBusy(I2C0_BASE)));
-	while(I2CMasterBusy(I2C0_BASE));
+	while(I2CMasterBusy(I2C_LIGHT_DEVICE));
 
     if(I2CMasterErr(I2C_LIGHT_DEVICE) != I2C_MASTER_ERR_NONE)
     {
@@ -123,7 +123,7 @@ int8_t readData(uint8_t regAddr, uint8_t *data, uint8_t bytes)
     I2CMasterControl(I2C_LIGHT_DEVICE, I2C_MASTER_CMD_BURST_SEND_START);
 
     /*Wait for send complete*/
-    while (!(I2CMasterBusy(I2C0_BASE)));
+    while (!(I2CMasterBusy(I2C_LIGHT_DEVICE)));
     while(I2CMasterBusy(I2C_LIGHT_DEVICE));
 
     if(I2CMasterErr(I2C_LIGHT_DEVICE) != I2C_MASTER_ERR_NONE)
@@ -159,7 +159,7 @@ int8_t readData(uint8_t regAddr, uint8_t *data, uint8_t bytes)
         /*Start Receive*/
         I2CMasterControl(I2C_LIGHT_DEVICE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
         /*Wait for send complete*/
-        while(!(I2CMasterBusy(I2C0_BASE)));
+        while(!(I2CMasterBusy(I2C_LIGHT_DEVICE)));
         while(I2CMasterBusy(I2C_LIGHT_DEVICE));
         if(I2CMasterErr(I2C_LIGHT_DEVICE) != I2C_MASTER_ERR_NONE)
         {

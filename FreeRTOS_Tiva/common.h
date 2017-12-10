@@ -75,6 +75,9 @@
 #define HB_OK_SOIL       (0x08)
 #define HB_OK_CHARGE     (0x10)
 
+/*I2C Read-Write flags*/
+#define WRITE_FLAG  false
+#define READ_FLAG   true
 
 /*Message IDs to differentiate between messages*/
 typedef enum message_type

@@ -121,7 +121,6 @@ int main(void)
     //BaseType_t xTaskCreate( TaskFunction_t pvTaskCode,const char * const pcName,unsigned short usStackDepth,void *pvParameters
     //,UBaseType_t uxPriority,TaskHandle_t *pxCreatedTask );
 
-
     if(xTaskCreate(mainTask, (const portCHAR *)"MainTask", configMINIMAL_STACK_SIZE, NULL, 1, &mainTaskHandle) != pdPASS)
     {
         UARTprintf("\r\nMain Task creation failed");
@@ -141,7 +140,6 @@ int main(void)
         stateRunning = false;
         return -1;
     }
-
     if(xTaskCreate(socketTask, (const portCHAR *)"SocketTask", configMINIMAL_STACK_SIZE, NULL, 4, &socketTaskHandle) != pdPASS)
     {
         UARTprintf("\r\Socket Task creation failed");
