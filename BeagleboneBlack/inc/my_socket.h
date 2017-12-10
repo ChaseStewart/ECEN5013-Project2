@@ -5,8 +5,8 @@
 #ifndef __MY_SOCKET_H__
 #define __MY_SOCKET_H__
 
-#define BBG_SERVER_HOST "127.0.0.1"
-#define BBG_SERVER_PORT 50010
+#define BBG_SERVER_HOST "192.168.141.110"
+#define BBG_SERVER_PORT 50021
 #define MAX_NUM_CONNS   5
 
 #define WEBSERVER_HOST "127.0.0.1"

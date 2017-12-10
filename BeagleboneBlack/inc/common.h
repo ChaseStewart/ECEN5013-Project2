@@ -14,7 +14,7 @@
 #ifndef __MY_COMMON_H__
 #define __MY_COMMON_H__
 
-#define NUM_TASKS 2
+#define NUM_TASKS 1
 #define MAX_FILELEN 1024
 #define MAX_MSGLEN  2048
 
@@ -61,6 +61,13 @@ extern volatile int main_state;
 extern volatile int logger_state;
 extern volatile int socket_state;
 
+
+/* define packet types */
+typedef enum packet_type {
+	DATA = 0,
+	ALERT,
+	ERROR
+} Packet_Type;
 
 /* define message_type */
 typedef enum message_type {	
