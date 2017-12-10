@@ -128,42 +128,25 @@ int main(int argc, char **argv)
 		printf("[bbg_server] could not create socket\n");
 		return 1;
 	}
-	int enable_sock_reuse = 1;
-	retval = setsockopt(socket_id, SOL_SOCKET, SO_REUSEADDR, &enable_sock_reuse, sizeof(enable_sock_reuse));
-	if (retval < 0)
-	{
-		printf("[bbg_server] could not set sock opt \n");
-		return 1;
-	}
-
 
 	/* setup bind params and then bind */
 	bbg_server.sin_addr.s_addr = inet_addr(BBG_SERVER_HOST);
 	bbg_server.sin_family = AF_INET;
 	bbg_server.sin_port = htons(BBG_SERVER_PORT);
-	if (bind(socket_id, (struct sockaddr *)&bbg_server, sizeof(bbg_server)) < 0)
-	{
-		printf("[bbg_server] Failed to bind to port %d\n", BBG_SERVER_PORT);
-		return 1;
-	}
 
 	/* listen for MAX_NUM_CONNS simultaneous connections */
-	listen(socket_id, MAX_NUM_CONNS);
-	printf("[bbg_server] Listening on %s:%d\n", BBG_SERVER_HOST, BBG_SERVER_PORT);
+	printf("[bbg_server] Connecting to %s:%d...\n", BBG_SERVER_HOST, BBG_SERVER_PORT);
 
 	/* For each accepted connection, listen for messages on conn_id*/
 	client_sockaddr_len = sizeof(struct sockaddr_in);
-	conn_id = accept(socket_id, (struct sockaddr *)&conn_id, (socklen_t *)&client_sockaddr_len );
-	if (conn_id < 0)
+	if( connect(socket_id, (struct sockaddr *)&bbg_server, client_sockaddr_len ) < 0)
 	{
-		printf("[bbg_server] Failed to accept connection\n");
-		return 1;
+		printf("[bbg_server] Failed to connect!");
 	}
 	printf("[bbg_server] Connected!\n");
 
-
 	/* create the socket thread */
-	if(pthread_create(&socket_thread, NULL, mainSocket, &conn_id) != 0)
+	if(pthread_create(&socket_thread, NULL, mainSocket, &socket_id) != 0)
 	{
 		logFromMain(logger_queue, LOG_CRITICAL, "Failed to create socket thread!\n");
 		return 1;

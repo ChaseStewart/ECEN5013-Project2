@@ -62,6 +62,13 @@ extern volatile int logger_state;
 extern volatile int socket_state;
 
 
+/* define packet types */
+typedef enum packet_type {
+	DATA = 0,
+	ALERT,
+	ERROR
+} Packet_Type;
+
 /* define message_type */
 typedef enum message_type {	
 	HEARTBEAT_REQ = 0, 

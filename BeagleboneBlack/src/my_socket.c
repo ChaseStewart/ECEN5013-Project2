@@ -9,7 +9,10 @@ void * mainSocket(void *arg)
 	mqd_t socket_queue, main_queue, logger_queue;
 	message_t *in_message;
 	char in_buffer[MAX_MSGLEN];
-
+	int *type_enum;
+	int *temp_data;
+	int *light_data;
+	int *humid_data;
 
 	/* initialize the queue. */
 	retval = initSocketQueues(&main_queue, &logger_queue, &socket_queue);
@@ -48,11 +51,12 @@ void * mainSocket(void *arg)
 	/* this is the main loop for the program */
 	while(socket_state > STATE_SHUTDOWN)
 	{
-		sigwait(&set, &sig);
 		retval = recv(sock_handle, &in_buffer, MAX_MSGLEN, 0);
 		if (retval > 0)
 		{
-			printf("[socket_thread] Received %s\n", in_buffer);
+			sscanf(in_buffer, "%d:%d:%d:%d", &type_enum, &temp_data, &light_data, &humid_data);
+			printf("[socket_thread] type is %d, temp is %d, light is %d, humidity is %d\n", type_enum, temp_data, light_data, humid_data);
+		
 		}
 		else if ((retval == 0))
 		{
