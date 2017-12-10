@@ -28,6 +28,12 @@ extern QueueHandle_t chargeQueue;
 extern bool stateRunning;
 int32_t g_ui32IPAddress;
 
+struct tcp_pcb *pcb;
+struct ip_addr my_ip;
+struct ip_addr host_ip;
+
+bool is_ready = true;
+
 void socketTask(void *pvParameters)
 {
     uint8_t pui8MACArray[8];            /* Variable to store the MAC address */
@@ -35,6 +41,7 @@ void socketTask(void *pvParameters)
     uint32_t notificationValue = 0;
     uint32_t ui32User0, ui32User1;
     uint32_t g_ui32IPAddress = 0;
+    err_t err;
 
     stateRunning = true;
     /* Thanks to TI for the enet_lwip example code to get an IP below. */
@@ -61,7 +68,7 @@ void socketTask(void *pvParameters)
     //
     // Tell the user what we are doing just now.
     //
-    UARTprintf("\r\nWaiting for IP.\n");
+    UARTprintf("\r\nWaiting for IP.");
 
     //
     // Convert the 24/24 split MAC address from NV ram into a 32/16 split MAC
@@ -97,15 +104,18 @@ void socketTask(void *pvParameters)
     MAP_IntPrioritySet(INT_EMAC0, ETHERNET_INT_PRIORITY);
     MAP_IntPrioritySet(FAULT_SYSTICK, SYSTICK_INT_PRIORITY);
 
-
     tcp_socket_init(IP_ADDR_ANY);
 
     while(stateRunning)
     {
-        //xTaskNotifyWait(0x00, ULONG_MAX, &notificationValue, portMAX_DELAY);   /*Blocks indefinitely waiting for notification*/
+
+
+        xTaskNotifyWait(0x00, ULONG_MAX, &notificationValue, portMAX_DELAY);   /*Blocks indefinitely waiting for notification*/
         if(notificationValue & TASK_NOTIFYVAL_HEARTBEAT)
         {
             sendHeartBeat(SOCKET_TASK_ID);
+            //tcp_write(pcb, "Hello\0", 6, TCP_WRITE_FLAG_COPY);
+            //tcp_output(pcb);
         }
         if(notificationValue & TASK_NOTIFYVAL_MSGQUEUE)
         {
@@ -161,14 +171,14 @@ void tcp_socket_init(uint32_t local_addr)
 }
 
 
-/**
+ /*
  * A new incoming connection has been accepted.
  */
+
 static err_t socket_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 {
-    struct tcp_pcb_listen *lpcb = (struct tcp_pcb_listen*)arg;
-
-    UARTprintf("socket_accept %p / %p\n", (void*)pcb, arg);
+     UARTprintf("\r\nConnected %p / %p", (void*)pcb, arg);
+     struct tcp_pcb_listen *lpcb = (struct tcp_pcb_listen*)arg;
 
     /* Decrease the listen backlog counter */
     tcp_accepted(lpcb);
@@ -183,8 +193,13 @@ static err_t socket_accept(void *arg, struct tcp_pcb *pcb, err_t err)
     /* Set up the various callback functions */
     tcp_recv(pcb, socket_recv);
     tcp_err(pcb, socket_err);
-    tcp_poll(pcb, socket_poll, SOCKET_POLL_INTERVAL);
+    tcp_poll(pcb, socket_close_conn, SOCKET_POLL_INTERVAL);
     tcp_sent(pcb, socket_sent);
+
+
+    tcp_write(pcb, "Hello\0", 6, TCP_WRITE_FLAG_COPY);
+    tcp_output(pcb);
+
 
     return ERR_OK;
 }
@@ -193,6 +208,7 @@ static err_t socket_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 static void socket_err(void *arg, err_t err)
 {
   UARTprintf("\r\ntcp_err: %s", lwip_strerr(err));
+  socket_close_conn(pcb);
 }
 
 
@@ -206,12 +222,6 @@ static err_t socket_sent(void *arg, struct tcp_pcb *pcb, u16_t len)
 
 static err_t socket_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 {
-    u16_t packet_len;
-    char *inbuffer;
-
-    packet_len = p->len;
-    inbuffer = (char *) malloc(packet_len);
-
     UARTprintf("\r\nReceived data: %s", (char *)p->payload);
     return ERR_OK;
 }
@@ -291,16 +301,15 @@ void lwIPHostTimerHandler(void)
             // There is no IP address, so indicate that the DHCP process is
             // running.
             //
-            UARTprintf("\r\nWaiting for IP address.\n");
+            UARTprintf("\r\nWaiting for IP address.");
         }
         else
         {
             //
             // Display the new IP address.
             //
-            UARTprintf("IP Address: ");
             DisplayIPAddress(ui32NewIPAddress);
-            UARTprintf("\nOpen a browser and enter the IP address.\n");
+            is_ready = true;
         }
 
         //

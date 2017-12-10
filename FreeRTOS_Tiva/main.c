@@ -68,7 +68,7 @@ int main(void)
        UARTprintf("\r\nMain Queue Creation Failed");
     }
 
-    UARTprintf("\r\nBegin project");
+    UARTprintf("\r\n\n*** Begin project ***");
 
     tempQueue = xQueueCreate(TEMP_QUEUE_SIZE, sizeof(message_t));
     if(tempQueue == NULL)
@@ -121,13 +121,14 @@ int main(void)
     //BaseType_t xTaskCreate( TaskFunction_t pvTaskCode,const char * const pcName,unsigned short usStackDepth,void *pvParameters
     //,UBaseType_t uxPriority,TaskHandle_t *pxCreatedTask );
 
-#if 0
+
     if(xTaskCreate(mainTask, (const portCHAR *)"MainTask", configMINIMAL_STACK_SIZE, NULL, 1, &mainTaskHandle) != pdPASS)
     {
         UARTprintf("\r\nMain Task creation failed");
         stateRunning = false;
         return -1;
     }
+
     if(xTaskCreate(lightTask, (const portCHAR *)"LightTask", configMINIMAL_STACK_SIZE, NULL, 2, &lightTaskHandle) != pdPASS)
     {
         UARTprintf("\r\nLight Task creation failed");
@@ -140,14 +141,14 @@ int main(void)
         stateRunning = false;
         return -1;
     }
-#endif
+
     if(xTaskCreate(socketTask, (const portCHAR *)"SocketTask", configMINIMAL_STACK_SIZE, NULL, 4, &socketTaskHandle) != pdPASS)
     {
         UARTprintf("\r\Socket Task creation failed");
         stateRunning = false;
         return -1;
     }
-#if 0
+
     if(xTaskCreate(soilTask, (const portCHAR *)"SoilTask", configMINIMAL_STACK_SIZE, NULL, 5, &soilTaskHandle) != pdPASS)
     {
         UARTprintf("\r\nTemperature Task creation failed");
@@ -161,7 +162,7 @@ int main(void)
         stateRunning = false;
         return -1;
     }
-#endif
+
     /*Start the scheduler*/
     vTaskStartScheduler();
 
@@ -200,7 +201,7 @@ void mainTask(void *pvParameters)
            }
            else
            {
-               stateRunning = false;
+               //stateRunning = false;
                hbFlags = 0;
            }
        }

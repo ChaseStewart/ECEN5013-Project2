@@ -16,6 +16,19 @@
 #define SOCKET_TCP_PRIO             TCP_PRIO_MIN
 
 /* socket definitions */
+#define HOST_IP_1                 192
+#define HOST_IP_2                 168
+#define HOST_IP_3                 141
+#define HOST_IP_4                 182
+
+
+
+#define SOCKET_IP_1                 192
+#define SOCKET_IP_2                 168
+#define SOCKET_IP_3                 141
+#define SOCKET_IP_4                 221
+
+
 #define SOCKET_PORT                 50021
 #define SOCKET_POLL_INTERVAL        4
 
