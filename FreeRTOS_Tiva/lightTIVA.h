@@ -37,6 +37,11 @@
 #define BIT_INT_DISABLE         0x00
 #define BIT_INT_ENABLE          0x01
 
+
+/*I2C Read-Write function calls*/
+#define writeLightData(x,y)  (writeI2CData(I2C_LIGHT_DEVICE,x,y,LIGHT_SLAVE_ADDRESS))
+#define readLightData(x,y,z) (readI2CData(I2C_LIGHT_DEVICE,x,y,z,LIGHT_SLAVE_ADDRESS))
+
 /****************************************************************
 * name  : lightTask
 * brief : This function is the start of the Light Tasks which
@@ -53,10 +58,6 @@ void lightTask(void *pvParameters);
 * return: None
 *****************************************************************/
 void lightSensorInit(void);
-
-int8_t writeData(uint8_t regAddr, uint8_t data);
-
-int8_t readData(uint8_t regAddr, uint8_t *data, uint8_t bytes);
 
 int8_t writeCtrlReg(uint8_t data);
 

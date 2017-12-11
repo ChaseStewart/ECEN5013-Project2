@@ -10,6 +10,7 @@
 #include "lightTIVA.h"
 #include "driverlib/i2c.h"
 #include "driverlib/pin_map.h"
+#include "i2cTIVA.h"
 
 /*Global variable for Queue Handles in main*/
 extern QueueHandle_t mainQueue;
@@ -17,7 +18,6 @@ extern QueueHandle_t tempQueue;
 extern QueueHandle_t lightQueue;
 extern QueueHandle_t socketQueue;
 extern QueueHandle_t soilQueue;
-extern QueueHandle_t chargeQueue;
 
 extern uint32_t sysClockSet;
 extern bool stateRunning;
@@ -26,6 +26,7 @@ void lightTask(void *pvParameters)
 {
     message_t queueData;        /*Variable to store msgs read from queue*/
     uint32_t notificationValue = 0;
+    float data = 0;
     lightSensorInit();
     GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
     while(stateRunning)
@@ -34,6 +35,7 @@ void lightTask(void *pvParameters)
         if(notificationValue & TASK_NOTIFYVAL_HEARTBEAT)
         {
             sendHeartBeat(LIGHT_TASK_ID);
+            //lightSensorLux(&data);
         }
         if(notificationValue & TASK_NOTIFYVAL_MSGQUEUE)
         {
@@ -68,140 +70,37 @@ void lightSensorInit(void)
     writeCtrlReg(BIT_POWER_UP);     /*Power ON the register*/
 }
 
-int8_t writeData(uint8_t regAddr, uint8_t data)
-{
-    /*Set Slave Address*/
-    I2CMasterSlaveAddrSet(I2C_LIGHT_DEVICE, LIGHT_SLAVE_ADDRESS, WRITE_FLAG);
-
-    /*Reg Address to be sent*/
-    I2CMasterDataPut(I2C_LIGHT_DEVICE, regAddr);
-
-    /*Start Send*/
-    I2CMasterControl(I2C_LIGHT_DEVICE, I2C_MASTER_CMD_SINGLE_SEND);
-
-    /*Wait for send complete*/
-	while (!(I2CMasterBusy(I2C0_BASE)));
-    while(I2CMasterBusy(I2C_LIGHT_DEVICE));
-
-    if(I2CMasterErr(I2C_LIGHT_DEVICE) != I2C_MASTER_ERR_NONE)
-    {
-        return -1;
-    }
-
-    /*Set Slave Address*/
-   // I2CMasterSlaveAddrSet(I2C_LIGHT_DEVICE, LIGHT_SLAVE_ADDRESS, WRITE_FLAG);
-
-    /*Data to be sent*/
-    I2CMasterDataPut(I2C_LIGHT_DEVICE, data);
-
-    /*Start Send*/
-    I2CMasterControl(I2C_LIGHT_DEVICE, I2C_MASTER_CMD_SINGLE_SEND);
-
-    /*Wait for send complete*/
-  //  while (!(I2CMasterBusy(I2C0_BASE)));
-	while(I2CMasterBusy(I2C_LIGHT_DEVICE));
-
-    if(I2CMasterErr(I2C_LIGHT_DEVICE) != I2C_MASTER_ERR_NONE)
-    {
-        return -1;
-    }
-
-    return 0;
-}
-
-int8_t readData(uint8_t regAddr, uint8_t *data, uint8_t bytes)
-{
-    uint32_t receivedValue = 0;
-
-    /*Set Slave Address to write*/
-    I2CMasterSlaveAddrSet(I2C_LIGHT_DEVICE, LIGHT_SLAVE_ADDRESS, WRITE_FLAG);
-
-    /*Reg Address to be sent*/
-    I2CMasterDataPut(I2C_LIGHT_DEVICE, regAddr);
-
-    /*Start Send*/
-    I2CMasterControl(I2C_LIGHT_DEVICE, I2C_MASTER_CMD_BURST_SEND_START);
-
-    /*Wait for send complete*/
-    while (!(I2CMasterBusy(I2C_LIGHT_DEVICE)));
-    while(I2CMasterBusy(I2C_LIGHT_DEVICE));
-
-    if(I2CMasterErr(I2C_LIGHT_DEVICE) != I2C_MASTER_ERR_NONE)
-    {
-        //return -1;
-    }
-
-    /*Set Slave Address to Read*/
-    I2CMasterSlaveAddrSet(I2C_LIGHT_DEVICE, LIGHT_SLAVE_ADDRESS, READ_FLAG);
-
-    if(bytes == 1)
-    {
-        /*Start Receive*/
-        I2CMasterControl(I2C_LIGHT_DEVICE, I2C_MASTER_CMD_SINGLE_RECEIVE);
-    }
-    else
-    {
-        /*Start Receive*/
-        I2CMasterControl(I2C_LIGHT_DEVICE, I2C_MASTER_CMD_BURST_RECEIVE_START);
-    }
-    /*Wait for send complete*/
-    while(!(I2CMasterBusy(I2C_LIGHT_DEVICE)));
-    while(I2CMasterBusy(I2C_LIGHT_DEVICE));
-    if(I2CMasterErr(I2C_LIGHT_DEVICE) != I2C_MASTER_ERR_NONE)
-    {
-       //return -1;
-    }
-    receivedValue = I2CMasterDataGet(I2C_LIGHT_DEVICE);
-    *data = (uint8_t)receivedValue;
-
-    if(bytes == 2)
-    {
-        /*Start Receive*/
-        I2CMasterControl(I2C_LIGHT_DEVICE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
-        /*Wait for send complete*/
-        while(!(I2CMasterBusy(I2C_LIGHT_DEVICE)));
-        while(I2CMasterBusy(I2C_LIGHT_DEVICE));
-        if(I2CMasterErr(I2C_LIGHT_DEVICE) != I2C_MASTER_ERR_NONE)
-        {
-           //return -1;
-        }
-        receivedValue = I2CMasterDataGet(I2C_LIGHT_DEVICE);
-        *(data+1) = (uint8_t)receivedValue;
-    }
-    return 0;
-}
-
 int8_t writeCtrlReg(uint8_t data)
 {
-    return writeData(BIT_CMD_SELECT_REG | LIGHT_CTRL_REG, data);
+    return writeLightData(BIT_CMD_SELECT_REG | LIGHT_CTRL_REG, data);
 }
 
 int8_t readIDRegister(uint8_t* id)
 {
     int8_t status;
     *id = 0;
-    status = readData(LIGHT_ID_REG| BIT_CMD_SELECT_REG, id, 1);
+    status = readLightData(LIGHT_ID_REG| BIT_CMD_SELECT_REG, id, 1);
     return status;
 }
 
 int8_t readADC0(uint16_t* lux)
 {
     int8_t status;
-    status = readData(LIGHT_DATA0LOW_REG | BIT_CMD_SELECT_REG | BIT_WORD_CMD, (uint8_t*)lux,2);
+    status = readLightData(LIGHT_DATA0LOW_REG | BIT_CMD_SELECT_REG | BIT_WORD_CMD, (uint8_t*)lux,2);
     return status;
 }
 
 int8_t readADC1(uint16_t* lux)
 {
     int8_t status;
-    status = readData(LIGHT_DATA1LOW_REG | BIT_CMD_SELECT_REG | BIT_WORD_CMD, (uint8_t*)lux,2);
+    status = readLightData(LIGHT_DATA1LOW_REG | BIT_CMD_SELECT_REG | BIT_WORD_CMD, (uint8_t*)lux,2);
     return status;
 }
 
 int8_t readTimingRegister(uint8_t* data)
 {
     int8_t status;
-    status = readData(LIGHT_TIMING_REG | BIT_CMD_SELECT_REG, data, 1);
+    status = readLightData(LIGHT_TIMING_REG | BIT_CMD_SELECT_REG, data, 1);
     return status;
 }
 

@@ -9,6 +9,7 @@
 #include "common.h"
 #include "tempTIVA.h"
 #include "driverlib/i2c.h"
+#include "i2cTIVA.h"
 
 /*Global variable for Queue Handles in main*/
 extern QueueHandle_t mainQueue;
@@ -32,6 +33,7 @@ void tempTask(void *pvParameters)
         if(notificationValue & TASK_NOTIFYVAL_HEARTBEAT)
         {
            sendHeartBeat(TEMP_TASK_ID);
+           //readTemperature(&temp);
         }
         if(notificationValue & TASK_NOTIFYVAL_MSGQUEUE)
         {
@@ -50,109 +52,6 @@ void tempTask(void *pvParameters)
         }
     }
     vTaskDelete(NULL);  /*Deletes Current task and frees up memory*/
-}
-
-int8_t writeTempData(uint8_t regAddr, uint8_t data)
-{
-    /*Set Slave Address*/
-    I2CMasterSlaveAddrSet(I2C_TEMP_DEVICE, TEMP_SLAVE_ADDRESS, WRITE_FLAG);
-
-    /*Reg Address to be sent*/
-    I2CMasterDataPut(I2C_TEMP_DEVICE, regAddr);
-
-    /*Start Send*/
-    I2CMasterControl(I2C_TEMP_DEVICE, I2C_MASTER_CMD_SINGLE_SEND);
-
-    /*Wait for send complete*/
-    while (!(I2CMasterBusy(I2C_TEMP_DEVICE)));
-    while(I2CMasterBusy(I2C_TEMP_DEVICE));
-
-    if(I2CMasterErr(I2C_TEMP_DEVICE) != I2C_MASTER_ERR_NONE)
-    {
-        return -1;
-    }
-
-    /*Set Slave Address*/
-   // I2CMasterSlaveAddrSet(I2C_LIGHT_DEVICE, LIGHT_SLAVE_ADDRESS, WRITE_FLAG);
-
-    /*Data to be sent*/
-    I2CMasterDataPut(I2C_TEMP_DEVICE, data);
-
-    /*Start Send*/
-    I2CMasterControl(I2C_TEMP_DEVICE, I2C_MASTER_CMD_SINGLE_SEND);
-
-    /*Wait for send complete*/
-  //  while (!(I2CMasterBusy(I2C0_BASE)));
-    while(I2CMasterBusy(I2C_TEMP_DEVICE));
-
-    if(I2CMasterErr(I2C_TEMP_DEVICE) != I2C_MASTER_ERR_NONE)
-    {
-        return -1;
-    }
-
-    return 0;
-}
-
-int8_t readTempData(uint8_t regAddr, uint8_t *data, uint8_t bytes)
-{
-    uint32_t receivedValue = 0;
-
-    /*Set Slave Address to write*/
-    I2CMasterSlaveAddrSet(I2C_TEMP_DEVICE, TEMP_SLAVE_ADDRESS, WRITE_FLAG);
-
-    /*Reg Address to be sent*/
-    I2CMasterDataPut(I2C_TEMP_DEVICE, regAddr);
-
-    /*Start Send*/
-    I2CMasterControl(I2C_TEMP_DEVICE, I2C_MASTER_CMD_BURST_SEND_START);
-
-    /*Wait for send complete*/
-    while (!(I2CMasterBusy(I2C_TEMP_DEVICE)));
-    while(I2CMasterBusy(I2C_TEMP_DEVICE));
-
-    if(I2CMasterErr(I2C_TEMP_DEVICE) != I2C_MASTER_ERR_NONE)
-    {
-        //return -1;
-    }
-
-    /*Set Slave Address to Read*/
-    I2CMasterSlaveAddrSet(I2C_TEMP_DEVICE, TEMP_SLAVE_ADDRESS, READ_FLAG);
-
-    if(bytes == 1)
-    {
-        /*Start Receive*/
-        I2CMasterControl(I2C_TEMP_DEVICE, I2C_MASTER_CMD_SINGLE_RECEIVE);
-    }
-    else
-    {
-        /*Start Receive*/
-        I2CMasterControl(I2C_TEMP_DEVICE, I2C_MASTER_CMD_BURST_RECEIVE_START);
-    }
-    /*Wait for send complete*/
-    while(!(I2CMasterBusy(I2C_TEMP_DEVICE)));
-    while(I2CMasterBusy(I2C_TEMP_DEVICE));
-    if(I2CMasterErr(I2C_TEMP_DEVICE) != I2C_MASTER_ERR_NONE)
-    {
-       //return -1;
-    }
-    receivedValue = I2CMasterDataGet(I2C_TEMP_DEVICE);
-    *data = (uint8_t)receivedValue;
-
-    if(bytes == 2)
-    {
-        /*Start Receive*/
-        I2CMasterControl(I2C_TEMP_DEVICE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
-        /*Wait for send complete*/
-        while(!(I2CMasterBusy(I2C_TEMP_DEVICE)));
-        while(I2CMasterBusy(I2C_TEMP_DEVICE));
-        if(I2CMasterErr(I2C_TEMP_DEVICE) != I2C_MASTER_ERR_NONE)
-        {
-           //return -1;
-        }
-        receivedValue = I2CMasterDataGet(I2C_TEMP_DEVICE);
-        *(data+1) = (uint8_t)receivedValue;
-    }
-    return 0;
 }
 
 /*Function to convert the Tmp102 ADC values to Temperature*/
@@ -175,9 +74,19 @@ int16_t tempConversion(int16_t temp)
 int8_t readTemperature(int16_t* temp)
 {
     int8_t status;
-    status = readTempData(PTR_ADDRESS_TEMP,(uint8_t*)temp,2);
-    *temp = ((*temp >> 8) | ((*temp & 0x00FF) << 8));  /*Expected First Byte and second byte are reversed, so changing the Endianess*/
-    *temp = tempConversion(*temp);
+    int16_t tempCheck;
+    status = readTempData(PTR_ADDRESS_TEMP,(uint8_t*)&tempCheck,2);
+    tempCheck = ((tempCheck >> 8) | ((tempCheck & 0x00FF) << 8));  /*Expected First Byte and second byte are reversed, so changing the Endianess*/
+    tempCheck = tempConversion(tempCheck);
+    if(tempCheck == 0)
+    {
+      /*Invalid Temp, a work-around*/
+       return -1;
+    }
+    else
+    {
+        *temp = tempCheck;
+    }
     return status;
 }
 

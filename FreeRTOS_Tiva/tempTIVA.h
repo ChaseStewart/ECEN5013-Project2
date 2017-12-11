@@ -27,6 +27,10 @@
 #define BIT_CONV_RATE_4HZ       0x80
 #define BIT_CONV_RATE_8HZ       0xC0
 
+/*I2C Read-Write function calls*/
+#define writeTempData(x,y)  (writeI2CData(I2C_TEMP_DEVICE,x,y,TEMP_SLAVE_ADDRESS))
+#define readTempData(x,y,z) (readI2CData(I2C_TEMP_DEVICE,x,y,z,TEMP_SLAVE_ADDRESS))
+
 
 /****************************************************************
 * name  : tempTask
@@ -36,17 +40,6 @@
 * return: None
 *****************************************************************/
 void tempTask(void *pvParameters);
-
-/****************************************************************
-* name  : writeTempData
-* brief : This function write data into the sensor's registers
-* param : refAddr - Register to
-* return: 0 - Success, -1 on Failure
-*****************************************************************/
-int8_t writeTempData(uint8_t regAddr, uint8_t data);
-
-
-int8_t readTempData(uint8_t regAddr, uint8_t *data, uint8_t bytes);
 
 int16_t tempConversion(int16_t temp);
 
