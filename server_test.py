@@ -15,9 +15,13 @@ print("Listening on host %s:%d" % (HOST, PORT))
 (conn, addr) = s.accept()
 print("Connected by %d" % (addr[1]))
 
+conn.send("01:10:20:3000".encode())
+
 while 1:
     data = conn.recv(1024)
-    print("Received %s" % (data))
-    break
+    if data == "":
+        break        
+    else:
+        print("Received %s" % (data))
 
 s.close()
