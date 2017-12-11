@@ -48,6 +48,8 @@
 
 #define TASK_NOTIFYVAL_MSGQUEUE     (0x01)  /*This would be the common notification value when a msg is sent to a task*/
 #define TASK_NOTIFYVAL_HEARTBEAT    (0x02)  /*Notification Value to send Heart-beat*/
+#define TASK_NOTIFYVAL_REQDATA      (0x04)  /*Used by main to request data*/
+#define TASK_NOTIFYVAL_SENDTOSCKT   (0x08)  /*Used by main to send data to socket*/
 #define ULONG_MAX                   (0xFFFFFFFF)
 
 /*HBs Tracking*/
@@ -121,4 +123,11 @@ typedef struct
 *****************************************************************/
 int8_t sendHeartBeat(Task_Id taskId);
 
+/*****************************************************************
+* name  : sendDataToMain
+* brief : This function is sends sensor data to the main task
+* param : Task_Id - Task ID of the calling task, Msg ID, Data -  Sensor data
+* return: 0 on SUCCESS, -1 on Failure
+*****************************************************************/
+int8_t sendDataToMain(Task_Id taskId, Message_Type msgId, int32_t data);
 #endif /* COMMON_H_ */

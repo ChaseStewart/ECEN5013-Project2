@@ -48,25 +48,27 @@ void soilTask(void *pvParameters)
 	
 	UARTprintf("\r\nInitializing Soil Task");
 	 
+	/*********************************Used for testing*************************/
+    /* trigger an ADC read*/
+    ADCProcessorTrigger(ADC0_BASE, SOIL_SEQ_NO);
+
+    /* wait for ADC to read and clear int */
+    while(!ADCIntStatus(ADC0_BASE, SOIL_SEQ_NO, false))
+    {
+    }
+    ADCIntClear(ADC0_BASE, 3);
+
+    /* get results */
+    ADCSequenceDataGet(ADC0_BASE, SOIL_SEQ_NO, &humidData);
+    UARTprintf("\r\nMain Task result: %d",humidData);
+
+    /* delay for 1/2 of a second */
+    SysCtlDelay(SYSTEM_CLOCK/3/2);
+    /**************************************************************************/
+
     while(stateRunning)
     {
-		/*********************************Used for testing*************************/
-		/* trigger an ADC read*/
-        ADCProcessorTrigger(ADC0_BASE, SOIL_SEQ_NO);
 
-        /* wait for ADC to read and clear int */
-        while(!ADCIntStatus(ADC0_BASE, SOIL_SEQ_NO, false))
-        {
-        }
-        ADCIntClear(ADC0_BASE, 3);
-
-        /* get results */
-        ADCSequenceDataGet(ADC0_BASE, SOIL_SEQ_NO, &humidData);
-        UARTprintf("\r\nMain Task result: %d",humidData);
-
-        /* delay for 1/2 of a second */
-        SysCtlDelay(SYSTEM_CLOCK/3/2);
-		/**************************************************************************/
         xTaskNotifyWait(0x00, ULONG_MAX, &notificationValue, portMAX_DELAY);   /*Blocks indefinitely waiting for notification*/
         if(notificationValue & TASK_NOTIFYVAL_HEARTBEAT)
         {
@@ -83,7 +85,8 @@ void soilTask(void *pvParameters)
                 }
                 if(queueData.id == SOIL_MOIST_DATA_REQ)
                 {
-
+                    ADCSequenceDataGet(ADC0_BASE, SOIL_SEQ_NO, &humidData);
+                    sendDataToMain(SOIL_TASK_ID,SOIL_MOIST_DATA,(int32_t)humidData);
                 }
             }
         }

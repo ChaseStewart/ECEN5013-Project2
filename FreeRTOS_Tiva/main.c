@@ -14,7 +14,8 @@
 #include "driverlib/adc.h"
 #include "driverlib/i2c.h"
 #include "driverlib/pin_map.h"
-
+#include <string.h>
+#include <stdio.h>
 /*Global Variables*/
 /*Queue Handles*/
 QueueHandle_t mainQueue;
@@ -32,7 +33,6 @@ TaskHandle_t tempTaskHandle;
 TaskHandle_t soilTaskHandle;
 TaskHandle_t mainTaskHandle;
 TaskHandle_t socketTaskHandle;
-TaskHandle_t soilTaskHandle;
 
 
 uint32_t sysClockSet = 0;
@@ -139,6 +139,7 @@ int main(void)
         stateRunning = false;
         return -1;
     }
+
     if(xTaskCreate(socketTask, (const portCHAR *)"SocketTask", configMINIMAL_STACK_SIZE, NULL, 4, &socketTaskHandle) != pdPASS)
     {
         UARTprintf("\r\nSocket Task creation failed");
@@ -164,7 +165,10 @@ void mainTask(void *pvParameters)
     message_t queueData;        /*Variable to store msgs read from queue*/
     uint32_t notificationValue = 0;
     uint32_t hbFlags = 0;
-
+    uint32_t tempData = 0;
+    uint32_t lightData = 0;
+    uint32_t soilData = 0;
+    uint8_t socketMsg[20];  /*For sending to Socket*/
     /*Start Timer for Hear-beat Requests*/
     if( xTimerStart( hbTimerHandle, portMAX_DELAY ) != pdPASS )
     {
@@ -193,6 +197,7 @@ void mainTask(void *pvParameters)
            else
            {
                //stateRunning = false;
+               UARTprintf("\r\nSystem lost a heart-beat");
                hbFlags = 0;
            }
        }
@@ -205,26 +210,57 @@ void mainTask(void *pvParameters)
                {
                    if(queueData.source == LIGHT_TASK_ID)
                    {
-                       UARTprintf("\r\nLight->Main HB received");
+                       //UARTprintf("\r\nLight->Main HB received");
                        hbFlags |= HB_OK_LIGHT;
                    }
                    else if(queueData.source == TEMP_TASK_ID)
                    {
-                       UARTprintf("\r\nTemp->Main HB received");
+                       //UARTprintf("\r\nTemp->Main HB received");
                        hbFlags |= HB_OK_TEMP;
                    }
                    else if(queueData.source == SOCKET_TASK_ID)
                    {
-                       UARTprintf("\r\nSocket->Main HB received");
+                       //UARTprintf("\r\nSocket->Main HB received");
                        hbFlags |= HB_OK_SOCKET;
                    }
                    else if(queueData.source == SOIL_TASK_ID)
                    {
-                       UARTprintf("\r\nSoil->Main HB received");
+                       //UARTprintf("\r\nSoil->Main HB received");
                        hbFlags |= HB_OK_SOIL;
                    }
                }
+               else if(queueData.id == TEMP_VALUE)
+               {
+                   tempData = queueData.data.intData;
+               }
+               else if(queueData.id == LIGHT_VALUE)
+               {
+                   lightData = queueData.data.intData;
+               }
+               else if(queueData.id == SOIL_MOIST_DATA)
+               {
+                   soilData = queueData.data.intData;
+               }
            }
+       }
+       if(notificationValue & TASK_NOTIFYVAL_REQDATA)
+       {
+           /*Send Temp data req and notify Temp task*/
+           sendDataFromMain(tempQueue, TEMP_DATA_REQ, 0);
+           xTaskNotify(tempTaskHandle,TASK_NOTIFYVAL_MSGQUEUE, eSetBits);
+
+           /*Send Light Data Req*/
+           sendDataFromMain(lightQueue, LIGHT_DATA_REQ, 0);
+           xTaskNotify(lightTaskHandle,TASK_NOTIFYVAL_MSGQUEUE, eSetBits);
+
+           /*Send Soil Data Req*/
+           sendDataFromMain(soilQueue, SOIL_MOIST_DATA_REQ, 0);
+           xTaskNotify(soilTaskHandle,TASK_NOTIFYVAL_MSGQUEUE, eSetBits);
+       }
+       if(notificationValue & TASK_NOTIFYVAL_SENDTOSCKT)
+       {
+           sprintf(socketMsg,"%d:%d:%d:%d\0",0,tempData,lightData,soilData);
+           logFromMain(socketMsg);
        }
     }
     /*Delete all the queues that were created*/
@@ -271,7 +307,7 @@ int8_t logFromMain(uint8_t* data)
     {
         UARTprintf("\r\nMain Task Sending to Socket failed");
     }
-
+    xTaskNotify(socketTaskHandle,TASK_NOTIFYVAL_MSGQUEUE, eSetBits);
     return 0;
 }
 
@@ -286,7 +322,18 @@ void hbTimerCB(TimerHandle_t xTimer)
 
 void wdTimerCB(TimerHandle_t xTimer)
 {
+    static int8_t count = 0;
+    count++;
     xTaskNotify(mainTaskHandle,TASK_NOTIFYVAL_HEARTBEAT, eSetBits); /*sends a notification to main to check for Heart-beats*/
+    if((count % 5) == 0)
+    {
+        //xTaskNotify(mainTaskHandle,TASK_NOTIFYVAL_SENDTOSCKT, eSetBits); /*send data to BBG*/
+    }
+    if((count % 3) == 0)
+    {
+       // xTaskNotify(mainTaskHandle,TASK_NOTIFYVAL_REQDATA, eSetBits);   /*send notification to collect sensor data*/
+    }
+
 }
 
 void myADCInit(void)

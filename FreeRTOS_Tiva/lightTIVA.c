@@ -27,7 +27,8 @@ void lightTask(void *pvParameters)
     message_t queueData;        /*Variable to store msgs read from queue*/
     uint32_t notificationValue = 0;
     float data = 0;
-    lightSensorInit();
+    //lightSensorInit();
+    //lightSensorLux(&data);
     GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
     while(stateRunning)
     {
@@ -35,7 +36,6 @@ void lightTask(void *pvParameters)
         if(notificationValue & TASK_NOTIFYVAL_HEARTBEAT)
         {
             sendHeartBeat(LIGHT_TASK_ID);
-            //lightSensorLux(&data);
         }
         if(notificationValue & TASK_NOTIFYVAL_MSGQUEUE)
         {
@@ -50,14 +50,7 @@ void lightTask(void *pvParameters)
                 {
                     float data = 0;
                     lightSensorLux(&data);
-                    if(data < 50)                           /*Testing Use case - FIX ME*/
-                    {
-                        GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 1);   /*When dark turn ON Light*/
-                    }
-                    else
-                    {
-                        GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
-                    }
+                    sendDataToMain(LIGHT_TASK_ID,LIGHT_VALUE,(int32_t)data);
                 }
             }
         }

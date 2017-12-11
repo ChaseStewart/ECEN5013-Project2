@@ -26,14 +26,13 @@ void tempTask(void *pvParameters)
     message_t queueData;                /*Variable to store msgs read from queue*/
     uint32_t notificationValue = 0;
     int16_t temp = 0;
-
+    //while(readTemperature(&temp) == -1);
     while(stateRunning)
     {
         xTaskNotifyWait(0x00, ULONG_MAX, &notificationValue, portMAX_DELAY);   /*Blocks indefinitely waiting for notification*/
         if(notificationValue & TASK_NOTIFYVAL_HEARTBEAT)
         {
            sendHeartBeat(TEMP_TASK_ID);
-           //readTemperature(&temp);
         }
         if(notificationValue & TASK_NOTIFYVAL_MSGQUEUE)
         {
@@ -47,6 +46,7 @@ void tempTask(void *pvParameters)
                 if(queueData.id == TEMP_DATA_REQ)
                 {
                     readTemperature(&temp);
+                    sendDataToMain(TEMP_TASK_ID,TEMP_VALUE,(int32_t)temp);
                 }
             }
         }

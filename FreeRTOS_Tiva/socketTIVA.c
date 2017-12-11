@@ -108,14 +108,10 @@ void socketTask(void *pvParameters)
 
     while(stateRunning)
     {
-
-
         xTaskNotifyWait(0x00, ULONG_MAX, &notificationValue, portMAX_DELAY);   /*Blocks indefinitely waiting for notification*/
         if(notificationValue & TASK_NOTIFYVAL_HEARTBEAT)
         {
             sendHeartBeat(SOCKET_TASK_ID);
-            //tcp_write(pcb, "Hello\0", 6, TCP_WRITE_FLAG_COPY);
-            //tcp_output(pcb);
         }
         if(notificationValue & TASK_NOTIFYVAL_MSGQUEUE)
         {
@@ -128,15 +124,15 @@ void socketTask(void *pvParameters)
                 }
                 if(queueData.id == LOGGER)
                 {
-
+                    UARTprintf("\r\nSocket Received Message: %s", queueData.data.message);
+                   // tcp_write(pcb, queueData.data.message , queueData.length, TCP_WRITE_FLAG_COPY);
+                    //tcp_output(pcb);
                 }
             }
         }
     }
     vTaskDelete(NULL);  /*Deletes Current task and frees up memory*/
 }
-
-
 
 void tcp_socket_init(uint32_t local_addr)
 {
@@ -197,8 +193,8 @@ static err_t socket_accept(void *arg, struct tcp_pcb *pcb, err_t err)
     tcp_sent(pcb, socket_sent);
 
 
-    tcp_write(pcb, "Hello\0", 6, TCP_WRITE_FLAG_COPY);
-    tcp_output(pcb);
+    //tcp_write(pcb, "Hello\0", 6, TCP_WRITE_FLAG_COPY);
+   // tcp_output(pcb);
 
 
     return ERR_OK;
@@ -216,7 +212,7 @@ static void socket_err(void *arg, err_t err)
 static err_t socket_sent(void *arg, struct tcp_pcb *pcb, u16_t len)
 {
    UARTprintf("\r\nsent data");
-   return (err_t) 0;
+   return ERR_OK;
 }
 
 
@@ -229,16 +225,17 @@ static err_t socket_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t e
 
 static err_t socket_poll(void *arg, struct tcp_pcb *pcb)
 {
-    return (err_t) 0;
+    return ERR_OK;
 }
 
 
 static err_t socket_close_conn(struct tcp_pcb *pcb)
 {
     err_t err;
-    UARTprintf("\r\nClosing connection");
+    //UARTprintf("\r\nClosing connection");
 
     /* Set the callbacks to none */
+    /*
     tcp_arg(pcb, NULL);
     tcp_recv(pcb, NULL);
     tcp_err(pcb, NULL);
@@ -249,7 +246,8 @@ static err_t socket_close_conn(struct tcp_pcb *pcb)
     if (err != ERR_OK) {
         UARTprintf("\r\nError %d closing connection", err);
     }
-    return err;
+    */
+    return ERR_OK;
 }
 
 

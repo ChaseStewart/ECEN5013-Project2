@@ -27,3 +27,20 @@ int8_t sendHeartBeat(Task_Id taskId)
     xTaskNotify(mainTaskHandle,TASK_NOTIFYVAL_MSGQUEUE, eSetBits);         /*Always will return pdPASS in this use-case*/
     return 0;
 }
+
+int8_t sendDataToMain(Task_Id taskId, Message_Type msgId, int32_t data)
+{
+    message_t sensorMessage;
+    sensorMessage.id = msgId;
+    sensorMessage.source = taskId;
+    sensorMessage.timestamp = 0;
+    sensorMessage.data.intData = data;     /*Logging will send string pointer to socket Task which inturn will store logs on BBG*/
+    sensorMessage.length = sizeof(data);
+    if(pdPASS != xQueueSend(mainQueue,(void*)&sensorMessage,portMAX_DELAY))    /*HeartBeat is high priority, so it can block if queue is full*/
+    {
+        UARTprintf("\r\nSensor data sending failed");
+        return -1;
+    }
+    xTaskNotify(mainTaskHandle,TASK_NOTIFYVAL_MSGQUEUE, eSetBits);         /*Always will return pdPASS in this use-case*/
+    return 0;
+}

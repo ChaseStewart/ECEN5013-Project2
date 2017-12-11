@@ -59,22 +59,76 @@ void lightTask(void *pvParameters);
 *****************************************************************/
 void lightSensorInit(void);
 
+/****************************************************************
+* name  : writeCtrlReg
+* brief : This function is writes data in to Ctrl register
+* param : uint8_t data to be written
+* return: 0 -Success, -1 Failure
+*****************************************************************/
 int8_t writeCtrlReg(uint8_t data);
 
+/****************************************************************
+* name  : readIDRegister
+* brief : This function is reads data from ID register
+* param : uint8_t* location to store data to be read
+* return: 0 -Success, -1 Failure
+*****************************************************************/
 int8_t readIDRegister(uint8_t* id);
 
+/****************************************************************
+* name  : readADC0
+* brief : This function is reads data from ADC0 register
+* param : uint16_t* location to store data to be read
+* return: 0 -Success, -1 Failure
+*****************************************************************/
 int8_t readADC0(uint16_t* lux);
 
+/****************************************************************
+* name  : readADC0
+* brief : This function is reads data from ADC register
+* param : uint16_t* location to store data to be read
+* return: 0 -Success, -1 Failure
+*****************************************************************/
 int8_t readADC1(uint16_t* lux);
 
+/****************************************************************
+* name  : readTimingRegister
+* brief : This function reads data from Timing register
+* param : uint8_t* location to store data to be read
+* return: 0 -Success, -1 Failure
+*****************************************************************/
 int8_t readTimingRegister(uint8_t* data);
 
+/****************************************************************
+* name  : lightSensorLux
+* brief : This function gets the lux data
+* param : float* location to store data to be read
+* return: 0 -Success, -1 Failure
+*****************************************************************/
 int8_t lightSensorLux(float* intensity);
 
+/****************************************************************
+* name  : lightConversion
+* brief : This function converts lux data
+* param : CH0, CH1 - ADC value
+* return: intensity data
+*****************************************************************/
 float lightConversion(float CH0, float CH1);
 
+/****************************************************************
+* name  : isDark
+* brief : This function decides the darkness
+* param : none
+* return: true/false
+*****************************************************************/
 bool isDark();
 
+/****************************************************************
+* name  : isBright
+* brief : This function decides the brightness
+* param : none
+* return: true/false
+*****************************************************************/
 bool isBright();
 
 #endif /* LIGHTTIVA_H_ */
