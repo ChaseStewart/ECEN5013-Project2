@@ -61,12 +61,13 @@ extern volatile int main_state;
 extern volatile int logger_state;
 extern volatile int socket_state;
 
-
 /* define packet types */
 typedef enum packet_type {
-	DATA = 0,
-	ALERT,
-	ERROR
+	DATA_PKT = 0,
+	NO_DATA_PKT,
+	ALRT_PKT,
+	LOG_PKT,
+	ERR_PKT
 } Packet_Type;
 
 /* define message_type */

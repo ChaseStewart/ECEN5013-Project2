@@ -23,7 +23,7 @@ extern QueueHandle_t tempQueue;
 extern QueueHandle_t lightQueue;
 extern QueueHandle_t socketQueue;
 extern QueueHandle_t soilQueue;
-extern QueueHandle_t chargeQueue;
+
 uint32_t data;
 
 /*

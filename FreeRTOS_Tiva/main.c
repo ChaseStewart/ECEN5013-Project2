@@ -7,9 +7,10 @@
 #include "main.h"
 #include "lightTIVA.h"
 #include "tempTIVA.h"
-#include "chargeTIVA.h"
 #include "socketTIVA.h"
 #include "soilTIVA.h"
+#include "i2cTIVA.h"
+#include "semphr.h"
 #include "driverlib/adc.h"
 #include "driverlib/i2c.h"
 #include "driverlib/pin_map.h"
@@ -21,7 +22,6 @@ QueueHandle_t tempQueue;
 QueueHandle_t lightQueue;
 QueueHandle_t socketQueue;
 QueueHandle_t soilQueue;
-QueueHandle_t chargeQueue;
 
 /*Task state variables*/
 bool stateRunning = true;
@@ -29,18 +29,20 @@ bool stateRunning = true;
 /*Task Handles*/
 TaskHandle_t lightTaskHandle;
 TaskHandle_t tempTaskHandle;
-TaskHandle_t chargeTaskHandle;
 TaskHandle_t soilTaskHandle;
 TaskHandle_t mainTaskHandle;
 TaskHandle_t socketTaskHandle;
 TaskHandle_t soilTaskHandle;
-TaskHandle_t chargeTaskHandle;
+
 
 uint32_t sysClockSet = 0;
 
 /*Timer Handle*/
 TimerHandle_t hbTimerHandle;
 TimerHandle_t wdTimerHandle;
+
+/*Mutex*/
+SemaphoreHandle_t I2CMutex;
 
 /*Main Function*/
 int main(void)
@@ -61,6 +63,12 @@ int main(void)
     /*Setup UART connected to Virtual COM Port for logging*/
     UARTStdioConfig(0, 115200, SYSTEM_CLOCK);
 
+    /*Initializing the mutex*/
+    I2CMutex = xSemaphoreCreateMutex();
+    if(I2CMutex == NULL)
+    {
+        UARTprintf("\r\nMutex Initialization Failed");
+    }
     /*Creating Queues*/
     mainQueue = xQueueCreate(MAIN_QUEUE_SIZE, sizeof(message_t));
     if(mainQueue == NULL)
@@ -92,13 +100,6 @@ int main(void)
         UARTprintf("\r\nSoil Queue Creation Failed");
     }
 
-    chargeQueue = xQueueCreate(CHARGE_QUEUE_SIZE, sizeof(message_t));
-    if(chargeQueue == NULL)
-    {
-        UARTprintf("\r\nCharge Queue Creation Failed");
-    }
-
-
     /*Create a timer for heart-beats*/
     hbTimerHandle = xTimerCreate("HBTimer",pdMS_TO_TICKS(3000),pdTRUE,(void*)0,hbTimerCB);
     if( hbTimerHandle == NULL )
@@ -118,8 +119,6 @@ int main(void)
 	myI2CInit();
 	myADCInit();
     /*Create different Tasks*/
-    //BaseType_t xTaskCreate( TaskFunction_t pvTaskCode,const char * const pcName,unsigned short usStackDepth,void *pvParameters
-    //,UBaseType_t uxPriority,TaskHandle_t *pxCreatedTask );
 
     if(xTaskCreate(mainTask, (const portCHAR *)"MainTask", configMINIMAL_STACK_SIZE, NULL, 1, &mainTaskHandle) != pdPASS)
     {
@@ -142,19 +141,12 @@ int main(void)
     }
     if(xTaskCreate(socketTask, (const portCHAR *)"SocketTask", configMINIMAL_STACK_SIZE, NULL, 4, &socketTaskHandle) != pdPASS)
     {
-        UARTprintf("\r\Socket Task creation failed");
+        UARTprintf("\r\nSocket Task creation failed");
         stateRunning = false;
         return -1;
     }
 
     if(xTaskCreate(soilTask, (const portCHAR *)"SoilTask", configMINIMAL_STACK_SIZE, NULL, 5, &soilTaskHandle) != pdPASS)
-    {
-        UARTprintf("\r\nTemperature Task creation failed");
-        stateRunning = false;
-        return -1;
-    }
-
-    if(xTaskCreate(chargeTask, (const portCHAR *)"ChargeTask", configMINIMAL_STACK_SIZE, NULL, 6, &chargeTaskHandle) != pdPASS)
     {
         UARTprintf("\r\nTemperature Task creation failed");
         stateRunning = false;
@@ -172,12 +164,13 @@ void mainTask(void *pvParameters)
     message_t queueData;        /*Variable to store msgs read from queue*/
     uint32_t notificationValue = 0;
     uint32_t hbFlags = 0;
+
     /*Start Timer for Hear-beat Requests*/
     if( xTimerStart( hbTimerHandle, portMAX_DELAY ) != pdPASS )
     {
         UARTprintf("\r\nTimer starting failed");
         stateRunning = false;
-        return -1;
+        return;
     }
 
     /*Starts a timer for checking heartbeats for once in 6seconds*/
@@ -185,14 +178,14 @@ void mainTask(void *pvParameters)
     {
         UARTprintf("\r\nTimer starting failed");
         stateRunning = false;
-        return -1;
+        return;
     }
     while(stateRunning)
     {
        xTaskNotifyWait(0x00, ULONG_MAX, &notificationValue, portMAX_DELAY);   /*Blocks indefinitely waiting for notification*/
        if(notificationValue & TASK_NOTIFYVAL_HEARTBEAT)
        {
-           if(hbFlags == (HB_OK_LIGHT | HB_OK_TEMP | HB_OK_SOCKET | HB_OK_SOIL | HB_OK_CHARGE))
+           if(hbFlags == (HB_OK_LIGHT | HB_OK_TEMP | HB_OK_SOCKET | HB_OK_SOIL))
            {
                UARTprintf("\r\nSystem is in safe state");
                hbFlags = 0;
@@ -230,11 +223,6 @@ void mainTask(void *pvParameters)
                        UARTprintf("\r\nSoil->Main HB received");
                        hbFlags |= HB_OK_SOIL;
                    }
-                   else if(queueData.source == FUEL_TASK_ID)
-                   {
-                       UARTprintf("\r\nCharge->Main HB received");
-                       hbFlags |= HB_OK_CHARGE;
-                   }
                }
            }
        }
@@ -244,13 +232,15 @@ void mainTask(void *pvParameters)
     vQueueDelete(tempQueue);
     vQueueDelete(lightQueue);
     vQueueDelete(socketQueue);
+    vQueueDelete(soilQueue);
+
 
     /*Delete Timer*/
     xTimerDelete(hbTimerHandle,portMAX_DELAY);
     xTimerDelete(wdTimerHandle,portMAX_DELAY);
 
     vTaskDelete(NULL);  /*Deletes Current task and frees up memory*/
-    return 0;
+    return;
 }
 
 
@@ -292,35 +282,12 @@ void hbTimerCB(TimerHandle_t xTimer)
     xTaskNotify(tempTaskHandle,TASK_NOTIFYVAL_HEARTBEAT, eSetBits);
     xTaskNotify(socketTaskHandle,TASK_NOTIFYVAL_HEARTBEAT, eSetBits);
     xTaskNotify(soilTaskHandle,TASK_NOTIFYVAL_HEARTBEAT, eSetBits);
-    xTaskNotify(chargeTaskHandle,TASK_NOTIFYVAL_HEARTBEAT, eSetBits);
 }
 
 void wdTimerCB(TimerHandle_t xTimer)
 {
     xTaskNotify(mainTaskHandle,TASK_NOTIFYVAL_HEARTBEAT, eSetBits); /*sends a notification to main to check for Heart-beats*/
 }
-
-void myI2CInit(void)
-{
-    /*Enable I2C0*/
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C0);
-    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_I2C0));
-
-    /*Enable GPIO*/
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
-    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOB));
-
-    /*Configure GPIOs for I2C*/
-    GPIOPinConfigure(GPIO_PB3_I2C0SDA);                /*Pin configure must be called for each pin*/
-    GPIOPinConfigure(GPIO_PB2_I2C0SCL);
-
-    GPIOPinTypeI2C(GPIO_PORTB_BASE, GPIO_PIN_3);       /*I2C0 - SDA pin*/
-    GPIOPinTypeI2CSCL(GPIO_PORTB_BASE, GPIO_PIN_2);    /*I2C0 - SCL pin*/
-
-    /*Set Clock Speed and enable Master*/
-    I2CMasterInitExpClk(I2C_LIGHT_DEVICE, sysClockSet, false);
-}
-
 
 void myADCInit(void)
 {

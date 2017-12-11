@@ -73,14 +73,4 @@ void wdTimerCB(TimerHandle_t xTimer);
 *****************************************************************/
 void myADCInit(void);
 
-/****************************************************************
-* name  : I2CInit
-* brief : Initialize the I2C bus for fuel gauge, temp sensor, and light sensor
-* param : None
-* return: None
-*****************************************************************/
-void myI2CInit(void);
-
-
-
 #endif /* MAIN_H_ */

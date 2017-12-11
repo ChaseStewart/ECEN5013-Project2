@@ -1,10 +1,14 @@
 #include "common.h"
 #include "logger.h"
 
-FILE *out_file;
+FILE *out_file = NULL;
 
 void * mainLogger(void *arg)
 {
+	FILE *wipeFile = NULL;
+	char *logname  = NULL;
+	logger_args *my_log_args;
+	
 	sigset_t set;
 	int retval, sig;
 	struct sigevent my_sigevent;
@@ -36,11 +40,19 @@ void * mainLogger(void *arg)
 		return (void *) 1;
 	}
 	
-	out_file = initLogger(logger_queue, arg);
-	if(out_file)
+	/* parse logger args */
+	my_log_args = (logger_args *)malloc(sizeof(logger_args));
+	my_log_args = (logger_args *) arg;
+	logname = my_log_args->filename;
+	wipeFile = fopen(logname, "w");
+	fclose(wipeFile);
+	out_file = fopen(logname, "a");
+	if(out_file == NULL)
 	{
-		logFromLogger(logger_queue, LOG_INFO, "Log file opened\n");
+		printf("[logger_thread] Failed to open outfile! Exiting...");
+		pthread_exit(NULL);
 	}
+	logFromLogger(logger_queue, LOG_INFO, "Opened Logfile\n");
 
 	sigemptyset(&set);
 	sigaddset(&set, LOGGER_SIGNO);
@@ -75,8 +87,8 @@ void * mainLogger(void *arg)
 		}
 	}
 	logFromLogger(logger_queue, LOG_INFO, "Destroyed Logger\n");
-	fclose(out_file);	
 	printf("[logger_thread] Destroying Logger\n");
+	fclose(out_file);	
 	pthread_exit(NULL);
 }
 
@@ -144,24 +156,9 @@ int8_t logMessage(message_t *in_message)
 	{
 		printf("[logger_thread] Error logging output!\n");
 	}
-	printf(outMessage);
-	//fputs(outMessage, out_file);
+	//printf(outMessage);
+	fputs(outMessage, out_file);
 	return 0;
-}
-
-FILE *initLogger(mqd_t queue, void *arg)
-{
-	FILE *wipeFile;
-	char *logname;
-	logger_args *my_log_args;
-	
-	/* parse logger args */
-	my_log_args = (logger_args *)malloc(sizeof(logger_args));
-	my_log_args = (logger_args *) arg;
-	logname = my_log_args->filename;
-	wipeFile = fopen(logname, "w");
-	fclose(wipeFile);
-	return(fopen(logname, "a"));
 }
 
 int8_t logFromLogger(mqd_t queue, int prio, char *message)

@@ -18,9 +18,6 @@ void *mainLogger(void *);
 /* set up the logger to run*/
 int8_t initLoggerQueues(mqd_t *main_queue, mqd_t *logger_queue);
 
-/* Set logger to notify and open file*/
-FILE *initLogger(mqd_t queue, void *arg);
-
 /*Function to print the logger structure onto the log file*/
 int8_t logMessage(message_t *in_message);
 
