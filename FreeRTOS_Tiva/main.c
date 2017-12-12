@@ -16,6 +16,7 @@
 #include "driverlib/pin_map.h"
 #include <string.h>
 #include <stdio.h>
+
 /*Global Variables*/
 /*Queue Handles*/
 QueueHandle_t mainQueue;
@@ -33,7 +34,6 @@ TaskHandle_t tempTaskHandle;
 TaskHandle_t soilTaskHandle;
 TaskHandle_t mainTaskHandle;
 TaskHandle_t socketTaskHandle;
-
 
 uint32_t sysClockSet = 0;
 
@@ -116,8 +116,9 @@ int main(void)
     }
     stateRunning = true;
 
-	myI2CInit();
-	myADCInit();
+    myI2CInit();
+    myADCInit();
+
     /*Create different Tasks*/
 
     if(xTaskCreate(mainTask, (const portCHAR *)"MainTask", configMINIMAL_STACK_SIZE, NULL, 1, &mainTaskHandle) != pdPASS)
@@ -127,27 +128,27 @@ int main(void)
         return -1;
     }
 
-    if(xTaskCreate(lightTask, (const portCHAR *)"LightTask", configMINIMAL_STACK_SIZE, NULL, 2, &lightTaskHandle) != pdPASS)
+    if(xTaskCreate(lightTask, (const portCHAR *)"LightTask", configMINIMAL_STACK_SIZE, NULL, 3, &lightTaskHandle) != pdPASS)
     {
         UARTprintf("\r\nLight Task creation failed");
         stateRunning = false;
         return -1;
     }
-    if(xTaskCreate(tempTask, (const portCHAR *)"TemperatureTask", configMINIMAL_STACK_SIZE, NULL, 3, &tempTaskHandle) != pdPASS)
+    if(xTaskCreate(tempTask, (const portCHAR *)"TemperatureTask", configMINIMAL_STACK_SIZE, NULL, 4, &tempTaskHandle) != pdPASS)
     {
         UARTprintf("\r\nTemperature Task creation failed");
         stateRunning = false;
         return -1;
     }
 
-    if(xTaskCreate(socketTask, (const portCHAR *)"SocketTask", configMINIMAL_STACK_SIZE, NULL, 4, &socketTaskHandle) != pdPASS)
+    if(xTaskCreate(socketTask, (const portCHAR *)"SocketTask", configMINIMAL_STACK_SIZE, NULL, 5, &socketTaskHandle) != pdPASS)
     {
         UARTprintf("\r\nSocket Task creation failed");
         stateRunning = false;
         return -1;
     }
 
-    if(xTaskCreate(soilTask, (const portCHAR *)"SoilTask", configMINIMAL_STACK_SIZE, NULL, 5, &soilTaskHandle) != pdPASS)
+    if(xTaskCreate(soilTask, (const portCHAR *)"SoilTask", configMINIMAL_STACK_SIZE, NULL, 2, &soilTaskHandle) != pdPASS)
     {
         UARTprintf("\r\nTemperature Task creation failed");
         stateRunning = false;
@@ -198,6 +199,8 @@ void mainTask(void *pvParameters)
            {
                //stateRunning = false;
                UARTprintf("\r\nSystem lost a heart-beat");
+               sprintf(socketMsg,"%d:TIVA missed a HEARTBEAT\0",ERR_PKT);
+               logFromMain(socketMsg);
                hbFlags = 0;
            }
        }
@@ -210,22 +213,18 @@ void mainTask(void *pvParameters)
                {
                    if(queueData.source == LIGHT_TASK_ID)
                    {
-                       //UARTprintf("\r\nLight->Main HB received");
                        hbFlags |= HB_OK_LIGHT;
                    }
                    else if(queueData.source == TEMP_TASK_ID)
                    {
-                       //UARTprintf("\r\nTemp->Main HB received");
                        hbFlags |= HB_OK_TEMP;
                    }
                    else if(queueData.source == SOCKET_TASK_ID)
                    {
-                       //UARTprintf("\r\nSocket->Main HB received");
                        hbFlags |= HB_OK_SOCKET;
                    }
                    else if(queueData.source == SOIL_TASK_ID)
                    {
-                       //UARTprintf("\r\nSoil->Main HB received");
                        hbFlags |= HB_OK_SOIL;
                    }
                }
@@ -259,7 +258,7 @@ void mainTask(void *pvParameters)
        }
        if(notificationValue & TASK_NOTIFYVAL_SENDTOSCKT)
        {
-           sprintf(socketMsg,"%d:%d:%d:%d\0",0,tempData,lightData,soilData);
+           sprintf(socketMsg,"%d:%d:%d:%d\0",DATA_PKT,tempData,lightData,soilData);
            logFromMain(socketMsg);
        }
     }
@@ -269,7 +268,6 @@ void mainTask(void *pvParameters)
     vQueueDelete(lightQueue);
     vQueueDelete(socketQueue);
     vQueueDelete(soilQueue);
-
 
     /*Delete Timer*/
     xTimerDelete(hbTimerHandle,portMAX_DELAY);
@@ -318,6 +316,7 @@ void hbTimerCB(TimerHandle_t xTimer)
     xTaskNotify(tempTaskHandle,TASK_NOTIFYVAL_HEARTBEAT, eSetBits);
     xTaskNotify(socketTaskHandle,TASK_NOTIFYVAL_HEARTBEAT, eSetBits);
     xTaskNotify(soilTaskHandle,TASK_NOTIFYVAL_HEARTBEAT, eSetBits);
+
 }
 
 void wdTimerCB(TimerHandle_t xTimer)
@@ -325,13 +324,13 @@ void wdTimerCB(TimerHandle_t xTimer)
     static int8_t count = 0;
     count++;
     xTaskNotify(mainTaskHandle,TASK_NOTIFYVAL_HEARTBEAT, eSetBits); /*sends a notification to main to check for Heart-beats*/
-    if((count % 5) == 0)
+    //if((count % 3) == 0)
     {
-        //xTaskNotify(mainTaskHandle,TASK_NOTIFYVAL_SENDTOSCKT, eSetBits); /*send data to BBG*/
+        xTaskNotify(mainTaskHandle,TASK_NOTIFYVAL_SENDTOSCKT, eSetBits); /*send data to BBG*/
     }
     if((count % 3) == 0)
     {
-       // xTaskNotify(mainTaskHandle,TASK_NOTIFYVAL_REQDATA, eSetBits);   /*send notification to collect sensor data*/
+        xTaskNotify(mainTaskHandle,TASK_NOTIFYVAL_REQDATA, eSetBits);   /*send notification to collect sensor data*/
     }
 
 }

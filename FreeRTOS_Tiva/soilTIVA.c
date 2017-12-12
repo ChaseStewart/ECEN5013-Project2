@@ -45,10 +45,10 @@ void soilTask(void *pvParameters)
     uint32_t humidData;
     message_t queueData;                /*Variable to store msgs read from queue*/
     uint32_t notificationValue = 0;
-	
-	UARTprintf("\r\nInitializing Soil Task");
-	 
-	/*********************************Used for testing*************************/
+
+    UARTprintf("\r\nInitializing Soil Task");
+
+    /*********************************Used for testing*************************/
     /* trigger an ADC read*/
     ADCProcessorTrigger(ADC0_BASE, SOIL_SEQ_NO);
 
@@ -63,7 +63,7 @@ void soilTask(void *pvParameters)
     UARTprintf("\r\nMain Task result: %d",humidData);
 
     /* delay for 1/2 of a second */
-    SysCtlDelay(SYSTEM_CLOCK/3/2);
+    //SysCtlDelay(SYSTEM_CLOCK/3/2);
     /**************************************************************************/
 
     while(stateRunning)
@@ -85,7 +85,17 @@ void soilTask(void *pvParameters)
                 }
                 if(queueData.id == SOIL_MOIST_DATA_REQ)
                 {
+#ifdef SOIL_ISSUES
+                    /* trigger an ADC read*/
+                    ADCProcessorTrigger(ADC0_BASE, SOIL_SEQ_NO);
+
+                    /* wait for ADC to read and clear int */
+                    while(!ADCIntStatus(ADC0_BASE, SOIL_SEQ_NO, false));
+
+                    ADCIntClear(ADC0_BASE, 3);
+
                     ADCSequenceDataGet(ADC0_BASE, SOIL_SEQ_NO, &humidData);
+#endif
                     sendDataToMain(SOIL_TASK_ID,SOIL_MOIST_DATA,(int32_t)humidData);
                 }
             }

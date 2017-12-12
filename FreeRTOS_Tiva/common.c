@@ -44,3 +44,4 @@ int8_t sendDataToMain(Task_Id taskId, Message_Type msgId, int32_t data)
     xTaskNotify(mainTaskHandle,TASK_NOTIFYVAL_MSGQUEUE, eSetBits);         /*Always will return pdPASS in this use-case*/
     return 0;
 }
+

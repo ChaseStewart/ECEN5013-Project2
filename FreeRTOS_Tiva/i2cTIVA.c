@@ -39,6 +39,7 @@ int8_t writeI2CData(uint32_t i2cDevice, uint8_t regAddr, uint8_t data, uint8_t s
 {
     xSemaphoreTake(I2CMutex, portMAX_DELAY);
     taskDISABLE_INTERRUPTS();
+    //IntMasterDisable();
     /*Set Slave Address*/
     I2CMasterSlaveAddrSet(i2cDevice, slaveAddress, WRITE_FLAG);
 
@@ -69,6 +70,7 @@ int8_t writeI2CData(uint32_t i2cDevice, uint8_t regAddr, uint8_t data, uint8_t s
     if(I2CMasterErr(i2cDevice) != I2C_MASTER_ERR_NONE)
     {
     }
+    //IntMasterEnable();
     taskENABLE_INTERRUPTS();
     xSemaphoreGive(I2CMutex);
     return 0;
@@ -78,6 +80,7 @@ int8_t readI2CData(uint32_t i2cDevice, uint8_t regAddr, uint8_t *data, uint8_t b
 {
     xSemaphoreTake(I2CMutex, portMAX_DELAY);
     taskDISABLE_INTERRUPTS();
+    //IntMasterDisable();
     uint32_t receivedValue = 0;
 
     /*Set Slave Address to write*/
@@ -135,6 +138,7 @@ int8_t readI2CData(uint32_t i2cDevice, uint8_t regAddr, uint8_t *data, uint8_t b
         receivedValue = I2CMasterDataGet(i2cDevice);
         *(data+1) = (uint8_t)receivedValue;
     }
+    //IntMasterEnable();
     taskENABLE_INTERRUPTS();
     xSemaphoreGive(I2CMutex);
     return 0;

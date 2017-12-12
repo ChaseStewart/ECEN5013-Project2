@@ -27,8 +27,8 @@ void lightTask(void *pvParameters)
     message_t queueData;        /*Variable to store msgs read from queue*/
     uint32_t notificationValue = 0;
     float data = 0;
-    //lightSensorInit();
-    //lightSensorLux(&data);
+    lightSensorInit();      /*Turns ON the sensor*/
+    lightSensorLux(&data);  /*Initializing with the current sensor value*/
     GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
     while(stateRunning)
     {
@@ -48,7 +48,6 @@ void lightTask(void *pvParameters)
                 }
                 if(queueData.id == LIGHT_DATA_REQ)
                 {
-                    float data = 0;
                     lightSensorLux(&data);
                     sendDataToMain(LIGHT_TASK_ID,LIGHT_VALUE,(int32_t)data);
                 }

@@ -59,6 +59,16 @@
 #define HB_OK_SOIL       (0x08)
 #define HB_OK_CHARGE     (0x10)
 
+/*Data Packets Enum*/
+typedef enum packet_type {
+    UNUSED = 0,
+    DATA_PKT,
+    NO_DATA_PKT,
+    ALRT_PKT,
+    LOG_PKT,
+    ERR_PKT
+} Packet_Type;
+
 /*Message IDs to differentiate between messages*/
 typedef enum message_type
 {
@@ -130,4 +140,5 @@ int8_t sendHeartBeat(Task_Id taskId);
 * return: 0 on SUCCESS, -1 on Failure
 *****************************************************************/
 int8_t sendDataToMain(Task_Id taskId, Message_Type msgId, int32_t data);
+
 #endif /* COMMON_H_ */

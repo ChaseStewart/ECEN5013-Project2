@@ -31,9 +31,9 @@ int32_t g_ui32IPAddress;
 struct tcp_pcb *pcb;
 struct ip_addr my_ip;
 struct ip_addr host_ip;
-
+bool ipCreated = false;
 bool is_ready = true;
-
+bool connectionAvailable = false;
 void socketTask(void *pvParameters)
 {
     uint8_t pui8MACArray[8];            /* Variable to store the MAC address */
@@ -104,7 +104,7 @@ void socketTask(void *pvParameters)
     MAP_IntPrioritySet(INT_EMAC0, ETHERNET_INT_PRIORITY);
     MAP_IntPrioritySet(FAULT_SYSTICK, SYSTICK_INT_PRIORITY);
 
-    tcp_socket_init(IP_ADDR_ANY);
+    tcp_socket_init();
 
     while(stateRunning)
     {
@@ -112,6 +112,11 @@ void socketTask(void *pvParameters)
         if(notificationValue & TASK_NOTIFYVAL_HEARTBEAT)
         {
             sendHeartBeat(SOCKET_TASK_ID);
+//            if(connectionAvailable == true)
+//            {
+//                tcp_write(pcb, "Hello\0", 6, TCP_WRITE_FLAG_COPY);
+//                tcp_output(pcb);
+//            }
         }
         if(notificationValue & TASK_NOTIFYVAL_MSGQUEUE)
         {
@@ -125,8 +130,11 @@ void socketTask(void *pvParameters)
                 if(queueData.id == LOGGER)
                 {
                     UARTprintf("\r\nSocket Received Message: %s", queueData.data.message);
-                   // tcp_write(pcb, queueData.data.message , queueData.length, TCP_WRITE_FLAG_COPY);
-                    //tcp_output(pcb);
+                    if(connectionAvailable == true)
+                    {
+                        tcp_write(pcb, queueData.data.message , queueData.length, TCP_WRITE_FLAG_COPY);
+                        tcp_output(pcb);
+                    }
                 }
             }
         }
@@ -134,19 +142,22 @@ void socketTask(void *pvParameters)
     vTaskDelete(NULL);  /*Deletes Current task and frees up memory*/
 }
 
-void tcp_socket_init(uint32_t local_addr)
-{
-    struct tcp_pcb *pcb;
-    err_t err;
 
+
+void tcp_socket_init(void)
+{
+    //struct tcp_pcb *pcb;
+    //err_t err;
+    const ip_addr_t ip_addr_bbg = { (u32_t)50331658 };
     UARTprintf("\r\nInitializing listener");
     pcb = tcp_new();
     if (pcb == NULL)
     {
         UARTprintf("\r\nhttpd_init: tcp_new failed");
     }
-    tcp_setprio(pcb, SOCKET_TCP_PRIO);
 
+#if 0
+    tcp_setprio(pcb, SOCKET_TCP_PRIO);
     /* set SOF_REUSEADDR here to explicitly bind httpd to multiple interfaces */
     err = tcp_bind(pcb, local_addr, SOCKET_PORT);
     if ( err != ERR_OK )
@@ -164,8 +175,26 @@ void tcp_socket_init(uint32_t local_addr)
     /* initialize callback arg and accept callback */
     tcp_arg(pcb, pcb);
     tcp_accept(pcb, socket_accept);
+#endif
+    while(!ipCreated);
+    if(tcp_connect(pcb, (ip_addr_t *)&ip_addr_bbg, SOCKET_PORT, socket_connCallBack) == ERR_OK)
+    {
+        UARTprintf("\r\nClient connected");
+        tcp_sent(pcb, socket_sent);
+        tcp_recv(pcb, socket_recv);
+        connectionAvailable = true;
+    }
+    else
+    {
+        UARTprintf("\r\nFailed to Connect as client");
+    }
 }
 
+static err_t socket_connCallBack(void *arg, struct tcp_pcb *tpcb, err_t err)
+{
+    UARTprintf("\r\nConnected as client");
+    return ERR_OK;
+}
 
  /*
  * A new incoming connection has been accepted.
@@ -191,19 +220,19 @@ static err_t socket_accept(void *arg, struct tcp_pcb *pcb, err_t err)
     tcp_err(pcb, socket_err);
     tcp_poll(pcb, socket_close_conn, SOCKET_POLL_INTERVAL);
     tcp_sent(pcb, socket_sent);
-
-
-    //tcp_write(pcb, "Hello\0", 6, TCP_WRITE_FLAG_COPY);
-   // tcp_output(pcb);
+    tcp_write(pcb, "Hello\0", 6, TCP_WRITE_FLAG_COPY);
+    tcp_output(pcb);
 
 
     return ERR_OK;
 }
 
 
+
 static void socket_err(void *arg, err_t err)
 {
   UARTprintf("\r\ntcp_err: %s", lwip_strerr(err));
+  connectionAvailable = false;
   socket_close_conn(pcb);
 }
 
@@ -212,7 +241,7 @@ static void socket_err(void *arg, err_t err)
 static err_t socket_sent(void *arg, struct tcp_pcb *pcb, u16_t len)
 {
    UARTprintf("\r\nsent data");
-   return ERR_OK;
+   return (err_t) 0;
 }
 
 
@@ -225,17 +254,16 @@ static err_t socket_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t e
 
 static err_t socket_poll(void *arg, struct tcp_pcb *pcb)
 {
-    return ERR_OK;
+    return (err_t) 0;
 }
 
 
 static err_t socket_close_conn(struct tcp_pcb *pcb)
 {
     err_t err;
-    //UARTprintf("\r\nClosing connection");
+    UARTprintf("\r\nClosing connection");
 
     /* Set the callbacks to none */
-    /*
     tcp_arg(pcb, NULL);
     tcp_recv(pcb, NULL);
     tcp_err(pcb, NULL);
@@ -246,8 +274,7 @@ static err_t socket_close_conn(struct tcp_pcb *pcb)
     if (err != ERR_OK) {
         UARTprintf("\r\nError %d closing connection", err);
     }
-    */
-    return ERR_OK;
+    return err;
 }
 
 
@@ -306,6 +333,7 @@ void lwIPHostTimerHandler(void)
             //
             // Display the new IP address.
             //
+            ipCreated = true;   /*IP getting created*/
             DisplayIPAddress(ui32NewIPAddress);
             is_ready = true;
         }

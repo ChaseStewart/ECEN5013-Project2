@@ -25,7 +25,7 @@ void tempTask(void *pvParameters)
 {
     message_t queueData;                /*Variable to store msgs read from queue*/
     uint32_t notificationValue = 0;
-    int16_t temp = 0;
+    int16_t temp = 0xFFFF;
     //while(readTemperature(&temp) == -1);
     while(stateRunning)
     {

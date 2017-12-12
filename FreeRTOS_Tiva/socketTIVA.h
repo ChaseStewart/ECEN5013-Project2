@@ -26,7 +26,7 @@
 #define SOCKET_IP_1                 192
 #define SOCKET_IP_2                 168
 #define SOCKET_IP_3                 141
-#define SOCKET_IP_4                 110
+#define SOCKET_IP_4                 221
 
 
 #define SOCKET_PORT                 50021
@@ -42,6 +42,7 @@
 *****************************************************************/
 void socketTask(void *pvParameters);
 
+static err_t socket_connCallBack(void *arg, struct tcp_pcb *tpcb, err_t err);
 
 /****************************************************************
 * name  : socket_accept
@@ -73,7 +74,7 @@ static err_t socket_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t e
 * param : None
 * return: None
 *****************************************************************/
-void tcp_socket_init(uint32_t local_addr);
+void tcp_socket_init(void);
 
 
 /****************************************************************
