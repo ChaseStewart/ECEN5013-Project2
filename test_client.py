@@ -2,7 +2,7 @@
 import socket
 
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client_socket.connect(('192.168.141.110', 50021))
+client_socket.connect(('10.0.0.5', 50021))
 #client_socket.connect(('localhost', 50010))
 
 while True:

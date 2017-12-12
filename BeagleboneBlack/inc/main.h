@@ -1,4 +1,5 @@
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <getopt.h>
@@ -13,7 +14,7 @@
 /* general vars*/
 #define INPUT_LEN 512
 
-#define BBG_SERVER_HOST "192.168.141.110"
+#define BBG_SERVER_HOST "10.0.0.5"
 #define BBG_SERVER_PORT 50021
 #define MAX_NUM_CONNS   5
 
@@ -21,10 +22,6 @@
 #define WEBSERVER_PORT 80
 #define MAX_NUM_CONNS   5
 
-/* commands */
-#define ACK_MSG "ACK"
-#define NAK_MSG "NAK"
-#define DELIM_STR ":\t\n"
 
 #define LED_ON "ON"
 #define LED_OFF "OFF"
