@@ -35,6 +35,14 @@ Highcharts.chart('container', {
         text: 'Thanks to Highcharts for the awesome software'
     },
 
+    xAxis: {
+        title: {
+            text: 'datetime'
+        },
+	categories: json['times']['data'],
+	type: 'datetime'
+    },
+
     yAxis: {
         title: {
             text: 'Relative values'
@@ -51,11 +59,10 @@ Highcharts.chart('container', {
             label: {
                 connectorAllowed: false
             },
-            pointStart: 2010
         }
     },
 
-    series: json,
+    series: json['values'],
 
     responsive: {
         rules: [{
