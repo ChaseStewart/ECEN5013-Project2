@@ -12,7 +12,7 @@ FILES  += src/common.c
 FILES  += src/my_socket.c
 
 all:
-	$(CC) $(CFLAGS) $(IPATH) $(FILES) $(LIBS) -o plant_server
+	$(CC) $(CFLAGS) $(IPATH) $(FILES) $(LIBS) -o plant_server `mysql_config --cflags --libs`
 	@echo BBB Server Build Complete!
 
 .PHONY: clean
