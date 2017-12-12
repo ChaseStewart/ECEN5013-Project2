@@ -339,13 +339,16 @@ void myADCInit(void)
 {
     /* Enable and reset the ADC peripheral*/
     SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
+    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_ADC0))
+    {
+    }
     SysCtlPeripheralReset(SYSCTL_PERIPH_ADC0);
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
 
     /* Configure the ADC capture sequence*/
     ADCSequenceDisable(ADC0_BASE, SOIL_SEQ_NO);
-    ADCSequenceConfigure(ADC0_BASE, SOIL_SEQ_NO, ADC_TRIGGER_PROCESSOR, 0);
-    ADCSequenceStepConfigure(ADC0_BASE, SOIL_SEQ_NO, 0, (ADC_CTL_CH0 | ADC_CTL_IE | ADC_CTL_END));
+    ADCSequenceConfigure(ADC0_BASE, SOIL_SEQ_NO, ADC_TRIGGER_ALWAYS, 0);
+    ADCSequenceStepConfigure(ADC0_BASE, SOIL_SEQ_NO, 0, (ADC_CTL_CH0 |  ADC_CTL_END));//ADC_CTL_IE |));
 
     /* Setup ADC pin and interrupts */
     GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3);

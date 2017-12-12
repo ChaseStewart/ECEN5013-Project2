@@ -24,30 +24,17 @@ extern QueueHandle_t lightQueue;
 extern QueueHandle_t socketQueue;
 extern QueueHandle_t soilQueue;
 
-uint32_t data;
-
-/*
-void ISR_ADC_Read (void)
-{
-
-    ADCIntClear(SOIL_ADC, SOIL_SEQ_NO);
-    while(!ADCIntStatus(SOIL_ADC, SOIL_SEQ_NO, false));
-
-    ADCSequenceDataGet(SOIL_ADC, SOIL_SEQ_NO, &data);
-
-}
-*/
 
 extern bool stateRunning;
 
 void soilTask(void *pvParameters)
 {
-    uint32_t humidData;
+    uint32_t humidData[32] = 0;
     message_t queueData;                /*Variable to store msgs read from queue*/
     uint32_t notificationValue = 0;
 
     UARTprintf("\r\nInitializing Soil Task");
-
+#if 0
     /*********************************Used for testing*************************/
     /* trigger an ADC read*/
     ADCProcessorTrigger(ADC0_BASE, SOIL_SEQ_NO);
@@ -60,11 +47,9 @@ void soilTask(void *pvParameters)
 
     /* get results */
     ADCSequenceDataGet(ADC0_BASE, SOIL_SEQ_NO, &humidData);
-    UARTprintf("\r\nMain Task result: %d",humidData);
 
-    /* delay for 1/2 of a second */
-    //SysCtlDelay(SYSTEM_CLOCK/3/2);
-    /**************************************************************************/
+    UARTprintf("\r\nMain Task result: %d",humidData);
+#endif
 
     while(stateRunning)
     {
@@ -85,7 +70,7 @@ void soilTask(void *pvParameters)
                 }
                 if(queueData.id == SOIL_MOIST_DATA_REQ)
                 {
-#ifdef SOIL_ISSUES
+#if 0
                     /* trigger an ADC read*/
                     ADCProcessorTrigger(ADC0_BASE, SOIL_SEQ_NO);
 
@@ -93,10 +78,10 @@ void soilTask(void *pvParameters)
                     while(!ADCIntStatus(ADC0_BASE, SOIL_SEQ_NO, false));
 
                     ADCIntClear(ADC0_BASE, 3);
-
-                    ADCSequenceDataGet(ADC0_BASE, SOIL_SEQ_NO, &humidData);
 #endif
-                    sendDataToMain(SOIL_TASK_ID,SOIL_MOIST_DATA,(int32_t)humidData);
+                    ADCSequenceDataGet(ADC0_BASE, SOIL_SEQ_NO, &humidData);
+
+                    sendDataToMain(SOIL_TASK_ID,SOIL_MOIST_DATA,(int32_t)humidData[0]);
                 }
             }
         }
