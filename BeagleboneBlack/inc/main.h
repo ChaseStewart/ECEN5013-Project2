@@ -14,14 +14,12 @@
 /* general vars*/
 #define INPUT_LEN 512
 
-#define BBG_SERVER_HOST "10.0.0.5"
+
+#define DRIVER_PATH "/dev/myledchar"
+
+#define BBG_SERVER_HOST "10.0.0.7"
 #define BBG_SERVER_PORT 50021
 #define MAX_NUM_CONNS   5
-
-#define WEBSERVER_HOST "127.0.0.1"
-#define WEBSERVER_PORT 80
-#define MAX_NUM_CONNS   5
-
 
 #define LED_ON "ON"
 #define LED_OFF "OFF"
