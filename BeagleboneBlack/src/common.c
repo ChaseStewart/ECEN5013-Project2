@@ -1,3 +1,21 @@
+/*****************************************************
+ * Redistribution, modification or use of this software in source or binary forms
+ * is permitted as long as the files maintain this copyright. Users are permitted to
+ * modify this and use it to learn about the field of embedded software but don't copy
+ * my (Chase E Stewart's) work for class, I worked really hard on this. Alex Fosdick and
+ * the University of Colorado and Chase E Stewart are not liable for any misuse of this material.
+ * License copyright (C) 2017 originally from Alex Fosdick, code by Chase E Stewart.
+ *****************************************************/
+/*
+ * @file common.c
+ * @brief A file that holds common functions for all tasks 
+ *
+ * @author Chase E Stewart and Raj Subramanian
+ * @date December 15 2017
+ * @version 1.0
+ *
+ */
+
 #include "common.h"
 
 
