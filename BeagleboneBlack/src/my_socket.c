@@ -12,10 +12,10 @@ void * mainSocket(void *arg)
 	char print_string[MAX_MSGLEN];
 	char the_rest[MAX_MSGLEN];
 	char mysql_string[MAX_MSGLEN];
-	int *type_enum;
-	int *temp_data;
-	int *light_data;
-	int *humid_data;
+	int type_enum;
+	int temp_data;
+	int light_data;
+	int humid_data;
 	
 	MYSQL *conn;
 	MYSQL_RES *res;
@@ -78,22 +78,42 @@ void * mainSocket(void *arg)
 		if (retval > 0)
 		{
 			sscanf(in_buffer, "%d:%[^\t\n]", &type_enum, &the_rest);
-			choice = (int)type_enum;
+			choice = type_enum;
 			switch (choice)
 			{
 				case UNUSED:
 					break;
 				case DATA_PKT:
 					sscanf(the_rest, "%d:%d:%d", &temp_data, &light_data, &humid_data);
+					if (temp_data == 0 && light_data == 0 && humid_data == 0)
+					{
+						printf("[socket_thread] Sensors are still calibrating\n");
+						break;
+					}
+
+					/* convert humidity data */
+					if (humid_data > 4000)
+					{
+						humid_data = 100;
+					}
+					else if (humid_data <= 0)
+					{
+						humid_data = 0;
+					}
+					else
+					{
+						humid_data = humid_data / 40;
+					}
+
 					sprintf(print_string, "Got data: temp=%d, light=%d, humid=%d\n", temp_data, light_data, humid_data);
 					logFromSocket(logger_queue, LOG_INFO, print_string);
 
-					sprintf(mysql_string, "INSERT INTO plant_data(temperature, humidity, light) values (%d, %d, %d);", temp_data, light_data, humid_data);
+					sprintf(mysql_string, "INSERT INTO plant_data(temperature, light, humidity) values (%d, %d, %d);", temp_data, light_data, humid_data);
 					if(mysql_query(conn, mysql_string))
 					{
 						printf("[socket_thread] MYSQL_ERROR: %s\n", mysql_error(conn));
-						main_state = STATE_SHUTDOWN;
-						socket_state = STATE_SHUTDOWN;
+						main_state = STATE_ERROR;
+						socket_state = STATE_ERROR;
 					}
 					break;
 	
@@ -111,6 +131,7 @@ void * mainSocket(void *arg)
 					sprintf(print_string,"%s\n", the_rest);
 					logFromSocket(logger_queue, LOG_ERROR, print_string);
 					main_state = STATE_ERROR;
+					socket_state = STATE_ERROR;
 					raise(SIGTERM);
 					break;
 

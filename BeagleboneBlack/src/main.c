@@ -8,7 +8,7 @@ volatile int logger_state = STATE_RUNNING;
 volatile int main_state   = STATE_STARTUP;
 volatile int socket_state = STATE_RUNNING;
 
-volatile int heartbeat_period = 1;
+volatile int heartbeat_period = 4;
 
 void my_print_help(void)
 {
@@ -18,16 +18,21 @@ void my_print_help(void)
 /* set all threads to SHUTDOWN state one by one then reap all resources */
 void handleCtrlC(int sig)
 {
-	main_state   = STATE_SHUTDOWN;
+	if (main_state != STATE_ERROR)
+	{
+		main_state   = STATE_SHUTDOWN;
+	}
 	raise(HEARTBEAT_SIGNO);
 }
 
 int main(int argc, char **argv)
 {
-	int retval, curr_arg, sig, socket_id, conn_id, client_sockaddr_len, is_connected;
+	int retval, curr_arg, sig, socket_id, conn_id, client_sockaddr_len, is_connected, file_id, idx;
 	struct sockaddr_in bbg_server;
 	char out_file_name[MAX_FILELEN];
 	char change_file_name[MAX_FILELEN];
+	char led_state[MAX_FILELEN];
+	char led_off_state[MAX_FILELEN];
 	logger_args *my_log_args;
 	message_t msg;
 	sigset_t set;
@@ -127,60 +132,62 @@ int main(int argc, char **argv)
 		printf("[bbg_server] could not create socket\n");
 		return 1;
 	}
+	int enable_sock_reuse = 1;
+	retval = setsockopt(socket_id, SOL_SOCKET, SO_REUSEADDR, &enable_sock_reuse, sizeof(enable_sock_reuse));
+	if (retval < 0)
+	{
+		printf("[bbg_server] could not set sock opt \n");
+		return 1;
+	}
+
 
 	/* setup bind params and then bind */
 	bbg_server.sin_addr.s_addr = inet_addr(BBG_SERVER_HOST);
 	bbg_server.sin_family = AF_INET;
 	bbg_server.sin_port = htons(BBG_SERVER_PORT);
+	if (bind(socket_id, (struct sockaddr *)&bbg_server, sizeof(bbg_server)) < 0)
+	{
+		printf("[bbg_server] Failed to bind to port %d with error %d\n", BBG_SERVER_PORT, errno);
+		return 1;
+	}
 
 	/* listen for MAX_NUM_CONNS simultaneous connections */
-	printf("[bbg_server] Connecting to %s:%d...\n", BBG_SERVER_HOST, BBG_SERVER_PORT);
+	listen(socket_id, MAX_NUM_CONNS);
+	printf("[bbg_server] Listening on %s:%d\n", BBG_SERVER_HOST, BBG_SERVER_PORT);
 
 	/* For each accepted connection, listen for messages on conn_id*/
 	client_sockaddr_len = sizeof(struct sockaddr_in);
-
-	/* Set send and recv timeouts*/
-	struct timeval timeout;
-	timeout.tv_sec  = 5;
-	timeout.tv_usec = 0;
-
-	if (setsockopt(socket_id, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout))< 0)
+	conn_id = accept(socket_id, (struct sockaddr *)&conn_id, (socklen_t *)&client_sockaddr_len );
+	if (conn_id < 0)
 	{
-		printf("[bbg_server] Failed to set receive timeout\n");
-	}
-	if (setsockopt(socket_id, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout))< 0)
-	{
-		printf("[bbg_server] Failed to set receive timeout\n");
-	}
-
-	/* spin until SIGINT, SIGTERM, or connection*/
-	is_connected = 0;
-	while ((is_connected == 0) && (main_state > STATE_SHUTDOWN))
-	{
-		if( connect(socket_id, (struct sockaddr *)&bbg_server, client_sockaddr_len ) < 0)
-		{
-			if ((errno == EINPROGRESS) || (errno == EALREADY) ){ 
-				printf("[bbg_server] Waiting to connect to remote node\n");
-			}
-			else if (errno == ECONNREFUSED){
-				printf("[bbg_server] Waiting to connect to remote node\n");
-				sleep(5);
-			}
-			else{
-				printf("\n[bbg_server] Failed to connect with errno %d!\n", errno);
-				logFromMain(logger_queue, LOG_CRITICAL, "Failed to connect to server!\n");
-				main_state = STATE_SHUTDOWN;
-			}
-		}
-		else
-		{
-			is_connected = 1;
-		}
+		printf("[bbg_server] Failed to accept connection\n");
+		return 1;
 	}
 	printf("[bbg_server] Connected!\n");
 
+	/* set LED state*/
+	file_id = open(DRIVER_PATH, O_RDWR);
+	if (file_id < 0)
+	{
+		if (errno == EACCES)
+		{
+			printf("[bbg_server] You must run as sudo. Exiting ... \n");
+			return 1;
+		}
+		printf("[bbg_server] Failed to open device at %s with errno %d\n", DRIVER_PATH, errno);
+		return 1;
+	}
+	sprintf(led_state, "state:on");
+	retval = write(file_id, led_state, strlen(led_state));
+	if (retval <= 0)
+	{
+		printf("[bbg_server] Failed to write to LED driver %d\n", errno);
+		return 1;
+	}
+
+
 	/* create the socket thread */
-	if(pthread_create(&socket_thread, NULL, mainSocket, &socket_id) != 0)
+	if(pthread_create(&socket_thread, NULL, mainSocket, &conn_id) != 0)
 	{
 		logFromMain(logger_queue, LOG_CRITICAL, "Failed to create socket thread!\n");
 		return 1;
@@ -320,10 +327,24 @@ int main(int argc, char **argv)
 	if(main_state == STATE_ERROR)
 	{
 		printf("[bbg_server] Exited with error\n");
+		sprintf(led_state, "state:on");
+		sprintf(led_off_state, "state:off");
+		
+		for (idx=0; idx<10; idx++)
+		{
+			write(file_id, led_state, strlen(led_state));
+			sleep(1);
+
+			write(file_id, led_off_state, strlen(led_off_state));
+			sleep(1);
+		}
+		write(file_id, led_state, strlen(led_state));
 	}
 	else
 	{
 		printf("[bbg_server] Exited without error\n");
+		sprintf(led_state, "state:off");
+		write(file_id, led_state, strlen(led_state));
 	}
 	return 0;
 }

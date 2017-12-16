@@ -63,7 +63,8 @@ extern volatile int socket_state;
 
 /* define packet types */
 typedef enum packet_type {
-	DATA_PKT = 0,
+	UNUSED = 0,
+	DATA_PKT,
 	NO_DATA_PKT,
 	ALRT_PKT,
 	LOG_PKT,

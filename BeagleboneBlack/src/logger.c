@@ -156,7 +156,7 @@ int8_t logMessage(message_t *in_message)
 	{
 		printf("[logger_thread] Error logging output!\n");
 	}
-	//printf(outMessage);
+	printf(outMessage);
 	fputs(outMessage, out_file);
 	return 0;
 }
