@@ -2,13 +2,13 @@ CC=gcc
 
 CFLAGS= -g -std=c99
 
-IPATH  = -I../BeagleboneBlack/inc 
+IPATH  = -I../BeagleboneBlack/inc
 IPATH  = -I./ 
 IPATH += -I../Unity/src
 
 LIBS= -pthread -lrt
 
-FILES  = unit_test.c
+FILES  = unit_test.c sysUnderTest.c
 FILES += ../Unity/src/unity.c
 
 all:

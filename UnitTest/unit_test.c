@@ -6,6 +6,7 @@
 #include <pthread.h>
 
 #include "../BeagleboneBlack/inc/common.h"
+#include "sysUnderTest.h"
 #include "unity.h"
 #include "unit_test.h"
 
@@ -69,11 +70,66 @@ void test_messages(void)
  
 }
 
+void test_currentTemperature_celcius(void)
+{
+	int16_t temp = 6656;
+	int16_t ret;
+	ret = tempConversion(temp);
+	TEST_ASSERT_EQUAL_INT16(ret, 26);
+}
 
+void test_tempConversionPositive(void)
+{
+	int16_t temp = 0x1700;
+	temp = tempConversion(temp);
+	TEST_ASSERT_EQUAL_INT16(temp,23);
+}
+
+void test_tempConversion0(void)
+{
+	int16_t temp = 0;
+	temp = tempConversion(temp);
+	TEST_ASSERT_EQUAL_INT16(temp,0);
+}
+
+void test_tempConversionNegative(void )
+{
+	int16_t temp = 0xFF00;
+	temp = tempConversion(temp);
+	TEST_ASSERT_EQUAL_INT16(temp,-1);	
+}
+
+void test_lightConversionPos(void)
+{
+	float ret = 0;
+	ret = lightConversion(2.0, 4.0);
+	TEST_ASSERT_EQUAL_FLOAT(ret, 0);
+}
+
+void test_lightConversion1(void)
+{
+	float ret = 0;
+	ret = lightConversion(2.0, 1.0);
+	TEST_ASSERT_EQUAL_FLOAT(ret, -0.026);
+}	
+
+void test_lightConversion2(void)
+{
+	float ret = 0;
+	ret = lightConversion(20.0, 15.0);
+	TEST_ASSERT_EQUAL_FLOAT(ret, 0.0265);
+}	
 int main(void)
 {
 	UNITY_BEGIN();
 	RUN_TEST(test_queue);
 	RUN_TEST(test_messages);
+	RUN_TEST(test_currentTemperature_celcius);
+	RUN_TEST(test_tempConversionPositive);
+	RUN_TEST(test_tempConversion0);
+	RUN_TEST(test_tempConversionNegative);
+	RUN_TEST(test_lightConversionPos);
+	RUN_TEST(test_lightConversion1);
+	RUN_TEST(test_lightConversion2);
 	return UNITY_END();
 }
