@@ -62,20 +62,22 @@ int main(int argc, char **argv);
 /* print a help message*/
 void my_print_help(void);
 
-int initThreads(pthread_t *logger_thread, pthread_t *socket_thread);
-
+/* shut down the server after receiving a Ctrl+C SIGINT */
 void handleCtrlC(int sig);
 
-int update_data(int msg_type, int value);
-
+/* send a log to the logger thread */
 int8_t logFromMain(mqd_t queue, int prio, char *message);
 
+/* send a log to the logger thread */
 int8_t initMainQueues(mqd_t *main_queue, mqd_t *logger_queue, mqd_t *socket_queue);
 
+/* ask the logger thread and the socket thread for a heartbeat */
 int8_t reqHeartbeats(mqd_t logger_queue, mqd_t socket_queue);
 
+/* check for all heartbeats and raise error if not found. */ 
 int8_t processHeartbeats(mqd_t main_queue, mqd_t logger_queue);
 
+/* initialize the queues for this thread to use */ 
 int8_t initMainQueues(mqd_t *main_queue, mqd_t *logger_queue, mqd_t *socket_queue);
 
 #endif

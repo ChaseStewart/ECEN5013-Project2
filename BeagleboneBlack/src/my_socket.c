@@ -207,6 +207,7 @@ void * mainSocket(void *arg)
 		}
 	}
 	mysql_close(conn);
+	shutdown(sock_handle, 0);
 	printf("[socket_thread] Destroyed Socket\n");
 	logFromSocket(logger_queue, LOG_INFO, "Destroyed Socket\n");
 	pthread_exit(NULL);

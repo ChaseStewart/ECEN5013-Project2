@@ -19,7 +19,7 @@ void test_queue(void)
         printf("press enter to continue\n");
         getchar();
 
-        printf("First ensure project 1 is running!\n");
+        printf("First ensure project 1 is not running!\n");
         printf("if it is, close it!\n");
         printf("press enter to continue\n");
         getchar();
