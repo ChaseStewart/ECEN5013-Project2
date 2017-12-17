@@ -73,6 +73,10 @@
 #define LOG_DEBUG 1
 #define LOG_ERROR 2
 #define LOG_CRITICAL 3
+#define TIVA_INFO 4
+#define TIVA_DEBUG 5
+#define TIVA_ERROR 6
+#define TIVA_CRITICAL 7
 
 /* state vars for each process */
 extern volatile int main_state;

@@ -2,7 +2,7 @@
 import socket
 from time import sleep
 
-HOST = '10.0.0.7'    # The remote host
+HOST = '192.168.141.182'    # The remote host
 PORT = 50021              # The same port as used by the server
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
