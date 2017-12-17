@@ -36,7 +36,7 @@
 
 #define DRIVER_PATH "/dev/myledchar"
 
-#define BBG_SERVER_HOST "10.0.0.7"
+#define BBG_SERVER_HOST "192.168.141.182"
 #define BBG_SERVER_PORT 50021
 #define MAX_NUM_CONNS   5
 

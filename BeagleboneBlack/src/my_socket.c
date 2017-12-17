@@ -125,7 +125,7 @@ void * mainSocket(void *arg)
 					}
 
 					sprintf(print_string, "Got data: temp=%d, light=%d, humid=%d\n", temp_data, light_data, humid_data);
-					logFromSocket(logger_queue, LOG_INFO, print_string);
+					logFromSocket(logger_queue, TIVA_INFO, print_string);
 
 					sprintf(mysql_string, "INSERT INTO plant_data(temperature, light, humidity) values (%d, %d, %d);", temp_data, light_data, humid_data);
 					if(mysql_query(conn, mysql_string))
@@ -137,18 +137,18 @@ void * mainSocket(void *arg)
 					break;
 	
 				case NO_DATA_PKT:
-					logFromSocket(logger_queue, LOG_ERROR, "No data from TIVA\n");
+					logFromSocket(logger_queue, TIVA_ERROR, "No data from TIVA\n");
 					break;
 
 				case ALRT_PKT:
 					sprintf(print_string,"Received alert: %s\n", the_rest);
-					logFromSocket(logger_queue, LOG_ERROR, print_string);
+					logFromSocket(logger_queue, TIVA_ERROR, print_string);
 					break;
 
 				case ERR_PKT:
 					printf("[socket] received ERR from TIVA\n");
 					sprintf(print_string,"%s\n", the_rest);
-					logFromSocket(logger_queue, LOG_ERROR, print_string);
+					logFromSocket(logger_queue, TIVA_CRITICAL, print_string);
 					main_state = STATE_ERROR;
 					socket_state = STATE_ERROR;
 					raise(SIGTERM);
@@ -156,10 +156,10 @@ void * mainSocket(void *arg)
 
 				case LOG_PKT:
 					sprintf(print_string,"%s\n", the_rest);
-					logFromSocket(logger_queue, LOG_INFO, print_string);
+					logFromSocket(logger_queue, TIVA_INFO, print_string);
 					break;
 				default:
-					logFromSocket(logger_queue, LOG_ERROR, "Received invalid TYPE command!\n");
+					logFromSocket(logger_queue, TIVA_CRITICAL, "Received invalid TYPE command!\n");
 					main_state = STATE_ERROR;
 					raise(SIGTERM);
 					break;
@@ -198,7 +198,7 @@ void * mainSocket(void *arg)
 			/* process Log*/
 			if (in_message->id == SOCKET)
 			{
-				retval = sendMessage(in_message);
+				printf("[socket_thread] Received socket message!\n");
 			} 
 			else if (in_message->id == HEARTBEAT_REQ) 
 			{
@@ -266,11 +266,4 @@ int8_t logFromSocket(mqd_t queue, int prio, char *message)
 	return 0;
 }
 
-int8_t sendMessage(message_t *in_message)
-{
-	printf("[socket_thread] TODO write this\n");
-	if (in_message->id != SOCKET);
 
-	return 1;
-
-}

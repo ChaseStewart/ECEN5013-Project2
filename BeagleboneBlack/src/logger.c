@@ -150,6 +150,18 @@ int8_t logMessage(message_t *in_message)
 		case LOG_CRITICAL:
 			strcpy(dbg_lvl, "CRITICAL");
 			break;
+		case TIVA_INFO:
+			strcpy(dbg_lvl, "TIVA][INFO");
+			break;
+		case TIVA_DEBUG:
+			strcpy(dbg_lvl, "TIVA][DEBUG");
+			break;
+		case TIVA_ERROR:
+			strcpy(dbg_lvl, "TIVA][ERROR");
+			break;
+		case TIVA_CRITICAL:
+			strcpy(dbg_lvl, "TIVA][CRITICAL");
+			break;
 		default:
 			return 1;
 	}
